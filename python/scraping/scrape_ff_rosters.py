@@ -1,30 +1,12 @@
 def scrape_ff_rosters():
-    import os
-    from datetime import date
     import sys
-    sys.path.append('/Users/andrewfelton/Documents/bb/2021/python')
+    sys.path.append('/python')
     import selenium_utilities
-    import selenium
-    from selenium import webdriver
-    from selenium.webdriver.common.keys import Keys
     import time
     import datetime
     from bs4 import BeautifulSoup
 
-    # start a selenium container
-    docker_ff_id = selenium_utilities.start_selenium()
-    time.sleep(5)
-
-    profile = webdriver.FirefoxProfile()
-    profile.set_preference('browser.download.manager.showWhenStarting', False)
-    profile.set_preference('browser.download.manager.closeWhenDone', True)
-    profile.set_preference('browser.helperApps.neverAsk.saveToDisk', ('text/csv,text/plain,application/octet-stream,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'))
-
-    driver = webdriver.Remote(
-        "http://127.0.0.1:4445/wd/hub", 
-        desired_capabilities=webdriver.DesiredCapabilities.FIREFOX,
-        browser_profile=profile
-        )
+    driver = selenium_utilities.start_driver()
 
     driver.get("https://www.fleaflicker.com/mlb/login")
     time.sleep(2)
@@ -45,7 +27,6 @@ def scrape_ff_rosters():
 
 
     bs_rosters = BeautifulSoup(driver.page_source, 'lxml')
-
     main_div = bs_rosters.find('div', id='body-center-main')
     tables = main_div.find_all('table')
 

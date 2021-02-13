@@ -25,7 +25,7 @@ def scrape_fg_projections(type, system, mytype, mysystem):
 
     driver.get("https://blogs.fangraphs.com/wp-login.php")
     time.sleep(2)
-    print(driver.current_url)
+    print('Arrived at '+driver.current_url)
 
     input_login = driver.find_element_by_id('user_login')
     input_login.send_keys('JohnnyFang')
@@ -35,17 +35,14 @@ def scrape_fg_projections(type, system, mytype, mysystem):
     input_submit.click()
     time.sleep(2)
 
-    print(driver.current_url)
-
     fg_proj_url_base = 'https://www.fangraphs.com/projections.aspx?pos=all'
     fg_proj_url_type = 'stats='+type
     fg_proj_url_system = 'type='+system
     fg_proj_url = fg_proj_url_base+'&'+fg_proj_url_type+'&'+fg_proj_url_system
 
-    print(driver.current_url)
     driver.get(fg_proj_url)
     time.sleep(2)
-    print(driver.current_url)
+    print('Arrived at '+driver.current_url)
 
 
     fg_account_name = driver.find_element_by_id('linkAccount').text

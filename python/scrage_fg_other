@@ -1,8 +1,0 @@
-
-import sys
-sys.path.append('/Users/andrewfelton/Documents/bb/2021/python')
-import selenium_utilities
-
-
-driver = start_driver()
-

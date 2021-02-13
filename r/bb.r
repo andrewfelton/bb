@@ -90,11 +90,13 @@ thebatx_hitters <- calc_z_hitters(thebatx_hitters)
 
 #proj_weights = c(1, 1, 1)
 
+hitter_split = .59
+pitcher_split = 1-hitter_split
 
 comb_vars_hitters = c('HR.PA', 'RBI.PA', 'R.PA', 'SB.PA', 'OBP', 'OPS')
 proj_list_hitters = c('fg_dc', 'thebat', 'thebatx')
 combined_hitters <- combine_projections(comb_vars_hitters, 'hitters', proj_list_hitters, 'PA')
-combined_hitters <- calc_z_hitters(combined_hitters['PA'>0], budget_split=.57)
+combined_hitters <- calc_z_hitters(combined_hitters['PA'>0], budget_split=hitter_split)
 
 
 comb_vars_pitchers = c('GS', 'QS', 'SV', 'HLD', 'ERA', 'WHIP', 'SO')
@@ -111,7 +113,7 @@ combined_pitchers['GS'][!is.na(combined_pitchers['GS_override'])] <-
   combined_pitchers['GS_override'][!is.na(combined_pitchers['GS_override'])]
 combined_pitchers['IP_override'] <- NULL
 combined_pitchers['GS_override'] <- NULL
-combined_pitchers <- calc_z_pitchers(combined_pitchers, budget_split=.43)
+combined_pitchers <- calc_z_pitchers(combined_pitchers, budget_split=pitcher_split)
 
 
 combined_all = union(
