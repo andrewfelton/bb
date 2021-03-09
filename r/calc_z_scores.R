@@ -1,20 +1,25 @@
-
-# df2 = fg_dc_hitters
-# df2$sample = df2$PA>500
-# df2 = df2[which(df$PA>100),]
-# df = fg_dc_hitters
-# rate_stats = c('OBP', 'OPS')
-# counting_stats = c('HR', 'R', 'RBI', 'SB')
-# denom_stat = 'PA'
-# weights = raw_weights_hitting
-
-# df = pod_pitchers
-# df = combined_pitchers
-# df['sample'] <- (df$IP>50) | df$SV>10 | df$HLD > 10
-# rate_stats = c('ERA', 'WHIP')
-# counting_stats = c('QS', 'SV', 'SO', 'HLD')
-# denom_stat = 'IP'
-# weights = raw_weights_pitching
+if (1==0) {
+  df2 = fg_dc_hitters
+  df2$sample = df2$PA>500
+  df2 = df2[which(df$PA>100),]
+  df = combined_hitters
+  denom_stat = 'PA'
+  df = fg_dc_hitters
+  rate_stats = c('OBP', 'OPS')
+  counting_stats = c('HR', 'R', 'RBI', 'SB')
+  denom_stat = 'PA'
+  weights = raw_weights_hitting
+  budget_split=.5
+  
+  df = pod_pitchers
+  df = combined_pitchers
+  df['sample'] <- (df$IP>100) | df$SVHLD > 12
+  rate_stats = rate_stats_pitching
+  counting_stats = counting_stats_pitching
+  denom_stat = 'IP'
+  weights = raw_weights_pitching
+  budget_split=.5
+}
 
 
 calc_z_scores <- function(df, rate_stats, counting_stats, denom_stat, weights, budget_split=.5) {
@@ -58,8 +63,9 @@ calc_z_scores <- function(df, rate_stats, counting_stats, denom_stat, weights, b
   df$Z = 0
   df$Z.Wgt = 0
   
-  
+  #i <- 4
   for(i in 1:length(basevars)) {
+    #print(i)
     var  = basevars[i]
     mean = as.numeric(dist_mean[var])
     sd   = as.numeric(dist_sd[var])
@@ -85,30 +91,31 @@ calc_z_scores <- function(df, rate_stats, counting_stats, denom_stat, weights, b
   df['Rank.Wgt'] = rank(-df['Z.Wgt'], na.last = TRUE)
   
   # Calc Z Above Replacement
-  df['ZAR'] = df['Z'] -  as.numeric(df[which(df$Rank == (16*12)),c('Z')])
-  df['ZAR.Wgt'] = df['Z.Wgt'] -  as.numeric(df[which(df$Rank == (16*12)),c('Z.Wgt')])
+  df['ZAR'] = df['Z'] -  as.numeric(df[which(df$Rank == (num_teams*12)),c('Z')])
+  df['ZAR.Wgt'] = df['Z.Wgt'] -  as.numeric(df[which(df$Rank == (num_teams*12)),c('Z.Wgt')])
   
   # Get the replacement-level Z score for catchers
   if(!('elig' %in% colnames(df))) {
      df <- left_join(df, pos_eligibility[c('fg_id', 'elig')], by='fg_id')
   }
-  df['Catcher'] <- ifelse(is.na(df['elig']), FALSE, sapply(df['elig'], function(elig) {str_detect(elig, 'C')}))
-  catchers <- df[df['Catcher']==TRUE,]
-  catchers['Rank'] <- rank(-catchers['Z'], na.last = TRUE)
-  catchers['Rank.Wgt'] <- rank(-catchers['Z.Wgt'], na.last = TRUE)
-  catchers['ZAR.C'] = catchers['Z'] - as.numeric(catchers[which(catchers$Rank == (16)),c('Z')])  
-  catchers['ZAR.Wgt.C'] = catchers['Z.Wgt'] - as.numeric(catchers[which(catchers$Rank == (16)),c('Z.Wgt')])  
-  
-  df <- left_join(df, catchers[c('fg_id', 'ZAR.C', 'ZAR.Wgt.C')], by='fg_id')
-  df['ZAR'] <- pmax(df['ZAR'],  df['ZAR.C'], na.rm = TRUE)
-  df['ZAR.Wgt'] <- pmax(df['ZAR.Wgt'],  df['ZAR.Wgt.C'], na.rm = TRUE)
-  
-  df <- df %>% select(-one_of(c('sample', 'Rank', 'Rank.Wgt', 'Catcher', 'ZAR.C', 'ZAR.Wgt.C')))
+  if('PA' %in% colnames(df)) {
+    df['Catcher'] <- ifelse(is.na(df['elig']), FALSE, sapply(df['elig'], function(elig) {str_detect(elig, 'C')}))
+    catchers <- df[df['Catcher']==TRUE,]
+    catchers['Rank'] <- rank(-catchers['Z'], na.last = TRUE)
+    catchers['Rank.Wgt'] <- rank(-catchers['Z.Wgt'], na.last = TRUE)
+    catchers['ZAR.C'] = catchers['Z'] - as.numeric(catchers[which(catchers$Rank == (num_teams)),c('Z')])  
+    catchers['ZAR.Wgt.C'] = catchers['Z.Wgt'] - as.numeric(catchers[which(catchers$Rank == (num_teams)),c('Z.Wgt')])  
+    
+    df <- left_join(df, catchers[c('fg_id', 'ZAR.C', 'ZAR.Wgt.C')], by='fg_id')
+    df['ZAR'] <- pmax(df['ZAR'],  df['ZAR.C'], na.rm = TRUE)
+    df['ZAR.Wgt'] <- pmax(df['ZAR.Wgt'],  df['ZAR.Wgt.C'], na.rm = TRUE)
+    
+    df <- df %>% select(-one_of(c('sample', 'Rank', 'Rank.Wgt', 'Catcher', 'ZAR.C', 'ZAR.Wgt.C')))
+  }
   
   df2 <- df %>% filter(ZAR.Wgt>0)
   sum_zar_wgt <- sum(df2['ZAR.Wgt'])
   
-
   df['$.Wgt'] <- lapply(df['ZAR.Wgt'], function(x) {16*260*budget_split*x/sum_zar_wgt})
   df = arrange(df, desc("$.Wgt"))
   

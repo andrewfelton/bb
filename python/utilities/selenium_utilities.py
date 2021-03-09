@@ -1,5 +1,5 @@
 import os
-import selenium
+
 
 def start_selenium():
     commands = [
@@ -40,14 +40,10 @@ def stop_selenium(docker_id):
 
 
 def start_driver():
-    import os
-    from datetime import date
     import sys
-    sys.path.append('/Users/andrewfelton/Documents/bb/2021/python')
+    sys.path.append('/python')
     import selenium_utilities
-    import selenium
     from selenium import webdriver
-    from selenium.webdriver.common.keys import Keys
     import time
 
     # start a selenium container
@@ -55,12 +51,21 @@ def start_driver():
     time.sleep(5)
 
     profile = webdriver.FirefoxProfile()
-    profile.set_preference('browser.download.manager.showWhenStarting', False)
+    profile.set_preference("browser.preferences.instantApply", True)
+    profile.set_preference('browser.safebrowsing.downloads.enabled', False)
+    profile.set_preference('browser.download.panel.shown', False)
     profile.set_preference('browser.download.manager.closeWhenDone', True)
-    profile.set_preference('browser.helperApps.neverAsk.saveToDisk', ('text/csv,text/plain,application/octet-stream,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'))
+    profile.set_preference("browser.helperApps.neverAsk.saveToDisk",
+                           'text/plain, application/octet-stream, application/binary, text/csv, application/csv, '
+                           'text/CSV, application/CSV, text/comma-separated-values, application/excel, '
+                           'application/download, text/xml, application/xml')
+    profile.set_preference('browser.helperApps.alwaysAsk.force', False)
+    profile.set_preference('dom.disable_open_during_load', False)
+    profile.set_preference('dom.disable_beforeunload', True)
+    profile.set_preference('dom.file.createInChild', True)
 
     driver = webdriver.Remote(
-        "http://127.0.0.1:4445/wd/hub", 
+        "http://127.0.0.1:4445/wd/hub",
         desired_capabilities=webdriver.DesiredCapabilities.FIREFOX,
         browser_profile=profile
         )

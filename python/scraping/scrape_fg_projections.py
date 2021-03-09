@@ -3,26 +3,14 @@ def scrape_fg_projections(type, system, mytype, mysystem):
     import os
     from datetime import date
     import sys
-    sys.path.append('/Users/andrewfelton/Documents/bb/2021/python')
+    sys.path.append('python/utilities')
     import selenium_utilities
-    from selenium import webdriver
+    import postgres
     import time
+    import pandas as pd
+    import datetime
 
-    # start a selenium container
-    docker_ff_id = selenium_utilities.start_selenium()
-    time.sleep(5)
-
-    profile = webdriver.FirefoxProfile()
-    profile.set_preference('browser.download.manager.showWhenStarting', False)
-    profile.set_preference('browser.download.manager.closeWhenDone', True)
-    profile.set_preference('browser.helperApps.neverAsk.saveToDisk', 'text/csv,text/plain,application/octet-stream,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-
-    driver = webdriver.Remote(
-        "http://127.0.0.1:4445/wd/hub", 
-        desired_capabilities=webdriver.DesiredCapabilities.FIREFOX,
-        browser_profile=profile
-        )
-
+    driver = selenium_utilities.start_driver()
     driver.get("https://blogs.fangraphs.com/wp-login.php")
     time.sleep(2)
     print('Arrived at '+driver.current_url)
@@ -66,19 +54,41 @@ def scrape_fg_projections(type, system, mytype, mysystem):
     command_ln = os.popen('ln -sf ' + new_file + ' ' + ln_file)
 
     driver.close()
-    selenium_utilities.stop_selenium(docker_ff_id)
-
+    selenium_utilities.stop_selenium('bbsel')
     print("Finished scraping "+ ln_file)
 
 
+    proj = pd.read_csv(ln_file)
+    proj.insert(0, 'asof_date', date.today().strftime('%Y-%m-%d'))
 
-scrape_fg_projections(type="bat", system="fangraphsdc", mytype="batters", mysystem="fg_dc")
-scrape_fg_projections(type="pit", system="fangraphsdc", mytype="pitchers", mysystem="fg_dc")
-scrape_fg_projections(type="bat", system="thebat", mytype="batters", mysystem="thebat")
-scrape_fg_projections(type="pit", system="thebat", mytype="pitchers", mysystem="thebat")
-scrape_fg_projections(type="bat", system="thebatx", mytype="batters", mysystem="thebatx")
+    tablename = mysystem + "_" + mytype + "_raw"
+    bbdb = postgres.connect_to_bbdb()
+
+    query_tables = "SELECT * FROM pg_catalog.pg_tables WHERE schemaname='proj';"
+    tables_list_result = bbdb.execute(query_tables)
+    tables_list = []
+    for table in tables_list_result:
+        tables_list.append(table[1])
+
+    if (tablename in tables_list):
+        command = 'TRUNCATE TABLE proj.'+tablename
+        bbdb.execute(command)
+    proj.to_sql(tablename, bbdb, schema='proj', if_exists='append')
 
 
+def scrape_all_fg_projections():
+    scrape_fg_projections(type="bat", system="fangraphsdc", mytype="batters", mysystem="fg_dc")
+    scrape_fg_projections(type="pit", system="fangraphsdc", mytype="pitchers", mysystem="fg_dc")
+    scrape_fg_projections(type="bat", system="thebat", mytype="batters", mysystem="thebat")
+    scrape_fg_projections(type="pit", system="thebat", mytype="pitchers", mysystem="thebat")
+    scrape_fg_projections(type="bat", system="thebatx", mytype="batters", mysystem="thebatx")
+
+# for testing
+if (1==0):
+    type = "bat"
+    system = "fangraphsdc"
+    mytype = "batters"
+    mysystem = "fg_dc"
 
 
 

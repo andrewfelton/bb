@@ -16,8 +16,6 @@ def get_player_names():
 	names = pd.read_sql_query(sql='SELECT * FROM REFERENCE.PLAYER_NAMES', con=bbdb)
 	for col in ['otto_id']:
 		names[col] = names[col].astype('str').replace('\.0', '', regex=True)
-
-	names.at[names[names['fg_id']=='19709'].index[0], 'otto_id'] = '23682'
 	return names
 
 
