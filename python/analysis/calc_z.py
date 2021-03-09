@@ -1,12 +1,11 @@
 
 
 def calc_z(df, rate_stats, counting_stats, denom, num_teams, players_per_team, budget_split):
-    import pandas as pd
+    import sys
     sys.path.append('python/utilities')
-    import postgres
-    import itertools
+    import utilities
 
-    stats = list(itertools.chain(*[counting_stats, rate_stats]))
+    stats = utilities.flatten([counting_stats, rate_stats])
 
     for var in counting_stats:
         var_pa = var + '_' + denom
@@ -41,7 +40,7 @@ def calc_z(df, rate_stats, counting_stats, denom, num_teams, players_per_team, b
 
     df = df.sort_values(by='value', ascending=False)
 
-    return_cols = list(itertools.chain(*[['fg_id'], [denom], counting_stats, rate_stats, ['zar', 'value']]))
+    return_cols =flatten([['fg_id'], [denom], counting_stats, rate_stats, ['zar', 'value']])
     df = df[return_cols]
     return df
 
