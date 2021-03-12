@@ -8,6 +8,7 @@ def scrape_cm_draft(draft_num, gs=None, db=None):
     import pandas as pd
     import gspread
     import gspread_dataframe
+    import requests
 
     #draft_num = '46233' # Testing
     #draft_num = '46117' # SoS Mock
@@ -15,7 +16,6 @@ def scrape_cm_draft(draft_num, gs=None, db=None):
     #draft_num = '46234' # SoS D2
     draft_url = "https://www.couchmanagers.com/mock_drafts/csv/download.php?draftnum="+str(draft_num)
 
-    import requests
     r = requests.get(draft_url).text.splitlines()
 
     mock = []
@@ -35,17 +35,18 @@ def scrape_cm_draft(draft_num, gs=None, db=None):
         left_on='ottid',
         right_on='otto_id'
     )
-
-
-
+    mock = mock[['Pick','Rd','Owner','name','fg_id']]
 
 
     if (gs!=None):
         gc = gspread.service_account(filename='./bb-2021-2b810d2e3d25.json')
-        bb2021 = gc.open("BB 2021")
+        bb2021 = gc.open("BB 2021 SoS")
         sheettitle = "Mock "+draft_num
-        bb2021.values_clear(sheettitle + "!A:Z")
-        gspread_dataframe.set_with_dataframe(bb2021.worksheet(sheettitle), mock_long)
+        if (sheettitle in bb2021.worksheets() == False):
+            bb2021.add_worksheet(title=sheettitle, rows='1', cols='1')
+        else:
+            bb2021.values_clear(sheettitle + "!A:Z")
+        gspread_dataframe.set_with_dataframe(bb2021.worksheet(sheettitle), mock)
         combined = bb2021.worksheet('Combined')
         hitter_projections = bb2021.worksheet('Hitter Projections')
         combined.update
