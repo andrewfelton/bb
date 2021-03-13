@@ -27,6 +27,7 @@ def calc_z(df, ls, type):
     mean = df[df['sample']==True].mean()
     sd = df[df['sample']==True].std()
 
+
     for var in stats:
         var_z = var + '_z'
         df[var_z] = df.apply(lambda row: (row[var] - mean[var])/sd[var], axis=1)
@@ -34,6 +35,7 @@ def calc_z(df, ls, type):
             df[var_z] = df.apply(lambda row: row[var_z]*row[denom]/mean[denom], axis=1)
             if (type == 'pitching'):
                 df[var_z] = -df[var_z]
+        df[var_z] = ls.z_weights[var] * df[var_z]
 
     df['z']=0
     for var in stats:

@@ -10,13 +10,11 @@ def scrape_cm_draft(draft_num, gs=None, db=None):
     import gspread_dataframe
     import requests
 
-    #draft_num = '46233' # Testing
-    #draft_num = '46117' # SoS Mock
-    #draft_num = '46233' # SoS D2
-    #draft_num = '46234' # SoS D2
+    #draft_num = '46233' # SoS D2 testing
     draft_url = "https://www.couchmanagers.com/mock_drafts/csv/download.php?draftnum="+str(draft_num)
-
+    print('Going to scrape draft '+draft_num+' from '+draft_url)
     r = requests.get(draft_url).text.splitlines()
+    print('Downloaded the .csv')
 
     mock = []
     for line in r:
@@ -36,7 +34,7 @@ def scrape_cm_draft(draft_num, gs=None, db=None):
         right_on='otto_id'
     )
     mock = mock[['Pick','Rd','Owner','name','fg_id']]
-
+    print('Munged into mock draft format')
 
     if (gs!=None):
         gc = gspread.service_account(filename='./bb-2021-2b810d2e3d25.json')
@@ -51,10 +49,14 @@ def scrape_cm_draft(draft_num, gs=None, db=None):
         hitter_projections = bb2021.worksheet('Hitter Projections')
         combined.update
         hitter_projections.update
+        print('Updated Google sheet')
 
     if (db!=None):
+        print('Trying to connect to database')
         bbdb = postgres.connect_to_bbdb()
+        print('Connected to database')
         mock.to_sql('cm_mock_'+draft_num, bbdb, schema='drafts', if_exists='replace')
+        print('Updated database')
 
 
 
