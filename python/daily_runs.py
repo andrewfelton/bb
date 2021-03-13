@@ -1,6 +1,7 @@
 from scraping import scrape_fg_projections
 from scraping import scrape_cm
 from munging import update_spreadsheets
+from analysis import create_full_valuations
 
 print('Scraping FanGraphs projections')
 #scrape_fg_projections.scrape_all_fg_projections()
@@ -8,6 +9,8 @@ print('Finished scraping FanGraphs')
 
 # Update the valuations for each league
 
+create_full_valuations.create_combined_valuations(league='SoS')
+#create_combined.create_combined_valuations(league='Legacy')
 
 
 

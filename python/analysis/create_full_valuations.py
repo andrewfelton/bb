@@ -41,14 +41,11 @@ def create_combined_valuations(league):
     columns = utilities.flatten(columns)
     combined_hitters = combined_hitters[columns]
 
-
-
     hitter_projections = bb2021.worksheet('Hitter Projections')
     bb2021.values_clear(hitter_projections.title + "!A:Z")
     gsdf.set_with_dataframe(hitter_projections, combined_hitters)
     hitter_projections.update
-    format_gs.format_gs_hitting()
-
+    format_gs.format_gs_all(league=league, ls=ls, type='hitting')
 
 
 
@@ -76,7 +73,7 @@ def create_combined_valuations(league):
     #bb2021.values_clear(pitcher_projections.title + "!A:Z")
     gsdf.set_with_dataframe(pitcher_projections, combined_pitchers)
     pitcher_projections.update
-    format_gs.format_gs_pitching()
+    format_gs.format_gs_all(league=league, ls=ls, type='pitching')
 
 
 
@@ -96,7 +93,7 @@ def create_combined_valuations(league):
 
 
 
-create_combined_valuations('SoS')
-create_combined_valuations('Legacy')
+#create_combined_valuations('SoS')
+#create_combined_valuations('Legacy')
 
 

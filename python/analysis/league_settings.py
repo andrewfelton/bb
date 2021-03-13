@@ -37,10 +37,19 @@ class lsettings:
             self.num_teams = 12
             self.hitting_counting_stats = ['hr','r','rbi','sb']
             self.hitting_rate_stats = ['obp']
+            self.z_weights_nominal_hitting = {
+                'hr':1, 'r':1, 'rbi':1, 'sb':1.3, 'obp':1
+            }
+            self.z_weights_hitting = self.normalize_z_weights(self.z_weights_nominal_hitting)
 
             self.pitching_counting_stats = ['ip','so','svhld']
             self.pitching_rate_stats = ['era', 'whip']
+            self.z_weights_nominal_pitching = {
+                'ip':1, 'so':1, 'svhld':.8, 'era':1, 'whip':1
+            }
+            self.z_weights_pitching = self.normalize_z_weights(self.z_weights_nominal_pitching)
 
+            self.z_weights = {**self.z_weights_hitting, **self.z_weights_pitching}
             self.batting_split = .55
             self.hitters_per_team = 12.5
             self.pitchers_per_team = 12.5
