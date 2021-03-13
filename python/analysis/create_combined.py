@@ -137,7 +137,7 @@ def create_combined_pitchers(ls):
 
 
     combined_pitchers = pd.DataFrame(df_ip['fg_id'].unique(), columns=['fg_id'])
-    for stat in utilities.flatten([['ip'], ls.pitching_stats]):
+    for stat in list(set(utilities.flatten([['ip'], ls.pitching_stats]))): # do this list(set(*)) to get unique values b/c ip may be in there twice
         t = weighted_average(df, stat, 'sys_weight', 'fg_id')
         combined_pitchers = combined_pitchers.merge(t, on='fg_id')
 

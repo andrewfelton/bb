@@ -10,7 +10,7 @@ print('Finished scraping FanGraphs')
 # Update the valuations for each league
 
 create_full_valuations.create_combined_valuations(league='SoS')
-#create_combined.create_combined_valuations(league='Legacy')
+create_full_valuations.create_combined_valuations(league='Legacy')
 
 
 
