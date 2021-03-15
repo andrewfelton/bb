@@ -2,6 +2,8 @@ def calc_z(df, ls, type):
     import sys
     sys.path.append('python/utilities')
     import utilities
+    sys.path.append('python/analysis')
+    import elig
 
     assert type in ['hitting', 'batting', 'pitching']
     if (type=='batting' or type=='hitting'):
@@ -45,6 +47,30 @@ def calc_z(df, ls, type):
 
     marginal_z = df[df['rank'] == ls.num_teams*players_per_team]['z'].to_list()[0]
     df['zar'] = df.apply(lambda row: (row['z'] - marginal_z), axis=1)
+
+    # Catcher adjustment
+    if (type=='batting' or type=='hitting'):
+        if not('elig' in df.columns):
+            eligibilities = elig.get_eligibilities('SoS')
+            df = df.merge(eligibilities[['fg_id','elig']], on='fg_id', how='left')
+        df['catcher'] = df.apply(lambda row: 'c' in str(row['elig']), axis=1)
+        catchers = df[df['catcher']]
+        catchers['rank'] = catchers['zar'].rank(ascending=False)
+        catcher_repl = catchers.iloc[16]['zar']
+        def add_catcher_repl(row):
+            if row['catcher']:
+                return row['zar'] - catcher_repl
+            else:
+                return row['zar']
+        df['zar'] = df.apply(lambda row: add_catcher_repl(row), axis=1)
+        del(df['catcher'])
+
+    if (type=='pitching'):
+        df['zar_skills'] = df['era_z']+df['whip_z']+df['so_z']
+        df['elig'] = df.apply(lambda row: 'sp' if (row['qs']>0) else 'rp', axis=1)
+        df['rank_sp'] = df[df['elig']=='sp']['zar'].rank(ascending=False)
+        df['rank_rp'] = df[df['elig']=='rp'].groupby('team')['zar'].rank(ascending=False)
+
 
     sum_zar = df[df['zar']>=0]['zar'].sum()
     df['value'] = df.apply(lambda row: ((ls.num_teams * 260 * budget_split) * row['zar'] / sum_zar), axis=1)

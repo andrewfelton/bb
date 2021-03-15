@@ -52,9 +52,7 @@ def scrape_cm_draft(draft_num, gs=None, db=None):
         print('Updated Google sheet')
 
     if (db!=None):
-        print('Trying to connect to database')
         bbdb = postgres.connect_to_bbdb()
-        print('Connected to database')
         mock.to_sql('cm_mock_'+draft_num, bbdb, schema='drafts', if_exists='replace')
         print('Updated database')
 
@@ -62,5 +60,4 @@ def scrape_cm_draft(draft_num, gs=None, db=None):
 
 
 #scrape_cm_draft(draft_num='46233', db=True)
-
-
+#scrape_cm_draft(draft_num='46231', db=True, gs=True)

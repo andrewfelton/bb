@@ -31,7 +31,7 @@ def create_combined_valuations(league):
 
     combined_hitters['sample'] = combined_hitters.apply(lambda row: row.pa > 500, axis=1)
     for run in range(1,3):
-        combined_hitters = calculations.calc_z(combined_hitters, ls=ls, type='hitting')
+        combined_hitters = calculations.calc_z(df=combined_hitters, ls=ls, type='hitting')
         combined_hitters['sample'] = combined_hitters.apply(lambda row: row.zar > 0, axis=1)
 
     columns = ['name','fg_id','type','pa',
@@ -62,10 +62,10 @@ def create_combined_valuations(league):
         combined_pitchers = calculations.calc_z(df=combined_pitchers, ls=ls, type='pitching')
         combined_pitchers['sample'] = combined_pitchers.apply(lambda row: row.zar > 0, axis=1)
 
-    columns = ['name','fg_id','type','ip',
+    columns = ['name','fg_id','team','type','elig','ip',
                ls.pitching_counting_stats,
                ls.pitching_rate_stats,
-               'zar','value']
+               'zar','value','zar_skills','rank_sp','rank_rp']
     columns = utilities.flatten(columns)
     combined_pitchers = combined_pitchers[columns]
 
@@ -93,7 +93,7 @@ def create_combined_valuations(league):
 
 
 
-#create_combined_valuations('SoS')
-#create_combined_valuations('Legacy')
+#create_combined_valuations(league='SoS')
+#create_combined_valuations(league='Legacy')
 
 

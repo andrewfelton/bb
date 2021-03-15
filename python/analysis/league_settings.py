@@ -15,15 +15,17 @@ class lsettings:
             self.num_teams = 16
             self.hitting_counting_stats = ['hr','r','rbi','sb']
             self.hitting_rate_stats = ['obp','ops']
+            self.hitting_other_stats = ['ab']
             self.z_weights_nominal_hitting = {
-                'hr':1, 'r':1, 'rbi':1, 'sb':1.3, 'obp':1, 'ops':1
+                'hr':1, 'r':1, 'rbi':1, 'sb':1.1, 'obp':1, 'ops':1
             }
             self.z_weights_hitting = self.normalize_z_weights(self.z_weights_nominal_hitting)
 
             self.pitching_counting_stats = ['qs','so','sv', 'hld']
             self.pitching_rate_stats = ['era', 'whip']
+            self.pitching_other_stats = ['gs', 'g']
             self.z_weights_nominal_pitching = {
-                'qs':1, 'so':1, 'sv':.9, 'hld':.6, 'era':1, 'whip':1
+                'qs':1.2, 'so':1, 'sv':.9, 'hld':.6, 'era':1, 'whip':1
             }
             self.z_weights_pitching = self.normalize_z_weights(self.z_weights_nominal_pitching)
 
@@ -38,7 +40,7 @@ class lsettings:
             self.hitting_counting_stats = ['hr','r','rbi','sb']
             self.hitting_rate_stats = ['obp']
             self.z_weights_nominal_hitting = {
-                'hr':1, 'r':1, 'rbi':1, 'sb':1.3, 'obp':1
+                'hr':1, 'r':1, 'rbi':1, 'sb':1.4, 'obp':1
             }
             self.z_weights_hitting = self.normalize_z_weights(self.z_weights_nominal_hitting)
 

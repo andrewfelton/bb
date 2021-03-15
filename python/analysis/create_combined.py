@@ -37,7 +37,8 @@ def create_combined_hitters(ls):
     df_pa = pd.read_sql_query(query_pa, bbdb)
 
 
-
+    query_teams = 'SELECT playerid as fg_id, fg_dc_batters_raw."Team" as team FROM proj.fg_dc_batters_raw'
+    df_teams = pd.read_sql_query(query_teams, bbdb)
 
     weights = {'system': ['fg_dc', 'thebat', 'thebatx', 'pod'],
                'sys_weight': [1, 1, 1.2, 1]}
@@ -78,7 +79,8 @@ def create_combined_hitters(ls):
     # merge in the names and reorder
     names = player_names.get_player_names()
     combined_hitters = combined_hitters.merge(names[['fg_id', 'name']], on='fg_id', how='left')
-    output_stats = utilities.flatten([['fg_id', 'name', 'pa'],[ls.hitting_stats]])
+    combined_hitters = combined_hitters.merge(df_teams, on='fg_id', how='left')
+    output_stats = utilities.flatten([['fg_id', 'name', 'team', 'pa'],[ls.hitting_stats]])
     combined_hitters = combined_hitters[output_stats]
 
     return combined_hitters
@@ -107,7 +109,6 @@ def create_combined_pitchers(ls):
     )
     df = pd.read_sql_query(query, bbdb)
 
-
     query_ip = (
             'SELECT proj.* FROM (' +
             'SELECT \'fg_dc\' as source, fg_id, ip FROM proj.fg_dc_pitchers ' +
@@ -116,6 +117,14 @@ def create_combined_pitchers(ls):
             ') AS proj'
     )
     df_ip = pd.read_sql_query(query_ip, bbdb)
+
+    query_teams = 'SELECT playerid as fg_id, fg_dc_pitchers_raw."Team" as team FROM proj.fg_dc_pitchers_raw'
+    df_teams = pd.read_sql_query(query_teams, bbdb)
+
+
+    # if 'sample' is not predefined then use entire data set
+    for var in ls.pitching_counting_stats:
+        df[var] = df.apply(lambda row: 0 if pd.isna(row[var]) else row[var], axis=1)
 
 
 
@@ -145,7 +154,8 @@ def create_combined_pitchers(ls):
     # merge in the names and reorder
     names = player_names.get_player_names()
     combined_pitchers = combined_pitchers.merge(names[['fg_id', 'name']], on='fg_id', how='left')
-    output_stats = utilities.flatten([['fg_id', 'name', 'ip'],[ls.pitching_stats]])
+    combined_pitchers = combined_pitchers.merge(df_teams, on='fg_id', how='left')
+    output_stats = utilities.flatten([['fg_id', 'name', 'team', 'ip'],[ls.pitching_stats]])
     combined_pitchers = combined_pitchers[output_stats]
 
     return combined_pitchers
