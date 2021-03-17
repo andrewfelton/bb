@@ -17,7 +17,7 @@ class lsettings:
             self.hitting_rate_stats = ['obp','ops']
             self.hitting_other_stats = ['ab']
             self.z_weights_nominal_hitting = {
-                'hr':1, 'r':1, 'rbi':1, 'sb':1.1, 'obp':1, 'ops':1
+                'hr':1.1, 'r':1, 'rbi':1.1, 'sb':1, 'obp':.9, 'ops':1
             }
             self.z_weights_hitting = self.normalize_z_weights(self.z_weights_nominal_hitting)
 
