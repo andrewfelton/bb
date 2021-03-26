@@ -10,6 +10,8 @@ def scrape_cm_draft(draft_num, gs=None, db=None):
     import gspread_dataframe
     import requests
 
+    assert gs==None or gs in ('SoS', 'Legacy')
+
     #draft_num = '46233' # SoS D2 testing
     draft_url = "https://www.couchmanagers.com/mock_drafts/csv/download.php?draftnum="+str(draft_num)
     print('Going to scrape draft '+draft_num+' from '+draft_url)
@@ -25,6 +27,10 @@ def scrape_cm_draft(draft_num, gs=None, db=None):
     colnames = mock.pop(0)
     mock = pd.DataFrame(mock, columns=colnames)
 
+
+
+
+
     names = player_names.get_player_names()
 
     mock = mock.merge(
@@ -38,7 +44,7 @@ def scrape_cm_draft(draft_num, gs=None, db=None):
 
     if (gs!=None):
         gc = gspread.service_account(filename='./bb-2021-2b810d2e3d25.json')
-        bb2021 = gc.open("BB 2021 SoS")
+        bb2021 = gc.open("BB 2021 "+gs)
         sheettitle = "Mock "+draft_num
         if (sheettitle in bb2021.worksheets() == False):
             bb2021.add_worksheet(title=sheettitle, rows='1', cols='1')
@@ -61,3 +67,15 @@ def scrape_cm_draft(draft_num, gs=None, db=None):
 
 #scrape_cm_draft(draft_num='46233', db=True)
 #scrape_cm_draft(draft_num='46231', db=True, gs=True)
+
+
+def scrape_d2():
+    print('Scraping D2 drafts')
+    d2_drafts = ['46233', '46234']
+    for draftnum in d2_drafts:
+        scrape_cm_draft(draft_num=draftnum, db=True, gs=None)
+        print('Scraped CM draft ' + draftnum)
+    update_spreadsheets.post_sos_d2_drafts(d2_drafts)
+    print('Done with daily run')
+
+

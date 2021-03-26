@@ -26,3 +26,7 @@ def post_sos_d2_drafts(draftnums):
     combined = bb2021.worksheet('Combined')
     combined.update
     print('Updated combined spreadsheet')
+
+
+
+

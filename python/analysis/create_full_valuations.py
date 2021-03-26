@@ -55,7 +55,7 @@ def create_combined_valuations(league):
 
     if league == 'SoS':
         combined_pitchers['sample'] = combined_pitchers.apply(lambda row: row.qs > 10.0 or row.sv > 5 or row.hld > 5, axis=1)
-    elif league == 'League':
+    elif league == 'Legacy':
         combined_pitchers['sample'] = combined_pitchers.apply(lambda row: row.ip > 100.0 or row.svhld > 10, axis=1)
 
     for run in range(1,3):

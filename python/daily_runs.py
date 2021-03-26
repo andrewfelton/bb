@@ -1,29 +1,38 @@
+import sys
 from scraping import scrape_fg_projections
 from scraping import scrape_cm
 from munging import update_spreadsheets
 from analysis import create_full_valuations
 from analysis import standings
 
-print('Scraping FanGraphs projections')
-#scrape_fg_projections.scrape_all_fg_projections()
-print('Finished scraping FanGraphs')
+print('Running '+sys.argv[0])
 
-# Update the valuations for each league
-create_full_valuations.create_combined_valuations(league='SoS')
-#create_full_valuations.create_combined_valuations(league='Legacy')
-print('Created and uploaded the valuations')
+if '-fg' in sys.argv:
+    print('Scraping FanGraphs projections...')
+    scrape_fg_projections.scrape_all_fg_projections()
+    print('Finished scraping FanGraphs')
+
+if '-v' in sys.argv:
+    # Update the valuations for each league
+    print('Running the valuations...')
+    create_full_valuations.create_combined_valuations(league='SoS')
+    print('Created and uploaded SoS valuations')
+    create_full_valuations.create_combined_valuations(league='Legacy')
+    print('Created and uploaded Legacy valuations')
 
 
 # Scrape the CM drafts
-print('Scraping SoS draft')
-scrape_cm.scrape_cm_draft(draft_num='46231', db=True, gs=True)
-standings.project_standings('46231')
-print('Updated SoS standings')
+#print('Scraping SoS draft...')
+#scrape_cm.scrape_cm_draft(draft_num='46231', db=True, gs='SoS')
+#standings.project_standings('46231')
+#print('Updated SoS standings')
 
-print('Scraping D2 drafts')
-d2_drafts = ['46233', '46234']
-for draftnum in d2_drafts:
-    scrape_cm.scrape_cm_draft(draft_num=draftnum, db=True)
-    print('Scraped CM draft '+draftnum)
-update_spreadsheets.post_sos_d2_drafts(d2_drafts)
-print('Done with daily run')
+
+print('Scraping Legacy draft')
+scrape_cm.scrape_cm_draft(draft_num='46331', db=True, gs='Legacy')
+standings.project_standings('46331')
+print('Updated Legacy standings')
+
+
+#scrape_cm.scrape_d2()
+

@@ -67,7 +67,10 @@ def calc_z(df, ls, type):
 
     if (type=='pitching'):
         df['zar_skills'] = df['era_z']+df['whip_z']+df['so_z']
-        df['elig'] = df.apply(lambda row: 'sp' if (row['qs']>0) else 'rp', axis=1)
+        if (ls.league_name=='SoS'):
+            df['elig'] = df.apply(lambda row: 'sp' if (row['qs']>0) else 'rp', axis=1)
+        elif (ls.league_name=='Legacy'):
+            df['elig'] = df.apply(lambda row: 'rp' if (row['svhld']>3 or row['ip']<30) else 'sp', axis=1)
         df['rank_sp'] = df[df['elig']=='sp']['zar'].rank(ascending=False)
         df['rank_rp'] = df[df['elig']=='rp'].groupby('team')['zar'].rank(ascending=False)
 
