@@ -1,5 +1,5 @@
 import sys
-sys.path.append('python/utilities')
+sys.path.append('python/general')
 import postgres
 import pandas as pd
 import gspread
@@ -26,6 +26,9 @@ def post_sos_d2_drafts(draftnums):
     combined = bb2021.worksheet('Combined')
     combined.update
     print('Updated combined spreadsheet')
+
+
+def update_inseason_sheet(leagues):
 
 
 

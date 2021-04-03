@@ -1,7 +1,7 @@
 # This scrapes historical data from bbref and uploads into bbdb
 
 from python.munging import import_bbref
-from python.utilities import postgres
+from python.general import postgres
 from python.scraping import scrape_bbref
 
 postgres.connect_to_bbdb()

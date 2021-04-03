@@ -20,20 +20,21 @@ def login():
     return driver
 
 
-def rosters(ls):
+def rosters(league, upload_to_db=True):
     import sys
     import datetime
-    import re
     from bs4 import BeautifulSoup
     import pandas as pd
-    sys.path.append('python/utilities')
+    sys.path.append('python/general')
+    import postgres
+    import classes
     sys.path.append('python/munging')
     import rosters
     import player_names
     import requests
 
-    assert(ls.league_platform == 'fleaflicker')
-    league_num = ls.league_num
+    assert(league.league_platform == 'fleaflicker')
+    league_num = league.league_num
 
     roster_url = 'https://www.fleaflicker.com/mlb/leagues/'+league_num+'/teams'
     page = requests.get(roster_url)
@@ -47,21 +48,12 @@ def rosters(ls):
     teams = []
 
     for t in tables:
-        # The first team's name is in the thead, the rest are in tbody
-        thead = t.find('thead')
-        team_name = thead.find("span", class_="league-name").text
-        teams.append(rosters.FantasyTeam(team_name))
-        current_team = teams[-1]
-
-        # Loop through the tbody
-        tbody = t.find('tbody')
-        trows = tbody.find_all('tr')
-
+        trows = t.find_all('tr')
         for tr in trows:
             if (tr.find("span", {"class": "league-name"})): # Found the span with the team name
                 team_name = tr.find("span", {"class": "league-name"}).text
-                print('New team: '+team_name)
-                teams.append(rosters.FantasyTeam(team_name))
+                #print('New team: '+team_name)
+                teams.append(classes.FantasyTeam(team_name))
                 current_team = teams[-1]
             elif tr.find('a', {"class": "player-text"}):
                 player_data = tr.find('a', {"class": "player-text"})
@@ -75,9 +67,56 @@ def rosters(ls):
     df_export.reset_index(drop=True, inplace=True)
 
     names = player_names.get_player_names()
-    df_export = df_export.merge(right=names, how='left', on='ff_id')
+    df_export = df_export.merge(right=names[['ff_id', 'fg_id']], how='left', on='ff_id')
+
+    missing_fg_id = df_export[df_export['fg_id'].isna()]
+    if len(missing_fg_id)>0:
+        print('Miising fg_id for '+str(len(missing_fg_id.values))+' player(s):')
+        for player in missing_fg_id.values.tolist():
+            print(player)
 
 
     file_rosters = '/Users/andrewfelton/Documents/bb/2021/data/rosters/rosters_'+league_num+'_'+str_today+'.csv'
-    print('Saving rosters to ' + file_rosters)
     df_export.to_csv(file_rosters, index=False)
+    print('Saved rosters to ' + file_rosters)
+
+    if upload_to_db:
+        bbdb = postgres.connect_to_bbdb()
+        df_export.to_sql('sos', con=bbdb, schema='rosters', if_exists='replace')
+        print('Uploaded to database')
+
+    return df_export
+
+
+def team_rosters():
+    import sys
+    import datetime
+    from bs4 import BeautifulSoup
+    import pandas as pd
+    sys.path.append('python/general')
+    import postgres
+    sys.path.append('python/munging')
+    import rosters
+    import player_names
+    import requests
+
+    assert(league.league_platform == 'fleaflicker')
+    league_num = league.league_num
+
+
+    roster_url = 'https://www.fleaflicker.com/mlb/leagues/'+league_num
+    page = requests.get(roster_url)
+    soup = BeautifulSoup(page.text, 'html.parser')
+    league_names_divs = soup.find_all('div', {'class':'league-name'})
+    for league_names_div in league_names_divs:
+        print(league_names_div)
+
+        team_roster_url = 'https://www.fleaflicker.com' + league_name_div.find('a')['href']
+        league_num = team_roster_url.split('/')[-1]
+        team_roster_page = requests.get(team_roster_url)
+        team_roster_soup = BeautifulSoup(page.text, 'html.parser')
+        main_table = team_roster_soup.find('div', {'id': 'body-center-main'}).find('table')
+        trows = main_table.find_all['tr']
+
+
+

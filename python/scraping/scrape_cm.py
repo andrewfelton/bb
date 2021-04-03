@@ -1,7 +1,7 @@
 def scrape_cm_draft(draft_num, gs=None, db=None):
 
     import sys
-    sys.path.append('python/utilities')
+    sys.path.append('python/general')
     import postgres
     sys.path.append('python/munging')
     import player_names

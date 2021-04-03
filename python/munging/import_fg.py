@@ -1,5 +1,5 @@
 import pandas as pd
-from python.utilities import postgres
+from python.general import postgres
 bbdb = postgres.connect_to_bbdb()
 names = pd.read_sql_query('SELECT * FROM reference.player_names', con=bbdb)
 

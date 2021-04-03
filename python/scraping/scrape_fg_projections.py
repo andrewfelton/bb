@@ -3,8 +3,11 @@ def scrape_fg_projections(type, system, mytype, mysystem):
     import os
     from datetime import date
     import sys
-    sys.path.append('python/utilities')
+    sys.path.append('python/general')
     import selenium_utilities
+    sys.path.append('python/munging')
+    import player_names
+    from player_names import put_missing_in_GS
     import postgres
     import time
     import pandas as pd
@@ -45,12 +48,12 @@ def scrape_fg_projections(type, system, mytype, mysystem):
     dl_file = "/Users/andrewfelton/Downloads/docker/FanGraphs\ Leaderboard.csv"
 
     today = date.today().strftime("%Y%m%d")
-    new_file = basepath + "/data/" + mysystem + "_" + mytype + "_" + today + ".csv"
+    new_file = basepath + "/data/fangraphs/" + mysystem + "_" + mytype + "_" + today + ".csv"
     stream_command = os.popen('mv ' + dl_file + ' ' + new_file)
     mv_file = stream_command.read()
 
     # create the soft link
-    ln_file = basepath + "/data/" + mysystem + "_" + mytype + ".csv"
+    ln_file = basepath + "/data/fangraphs/" + mysystem + "_" + mytype + ".csv"
     command_ln = os.popen('ln -sf ' + new_file + ' ' + ln_file)
 
     driver.close()
@@ -60,6 +63,11 @@ def scrape_fg_projections(type, system, mytype, mysystem):
 
     proj = pd.read_csv(ln_file)
     proj.insert(0, 'asof_date', date.today().strftime('%Y-%m-%d'))
+
+    # Check to confirm that all the fg_id are in the names table
+    # To avoid pandas issues take it out of the dataframe and then put it back in
+    fg_ids = proj[['playerid']].astype(str).values
+    #put_missing_in_GS(id_list=pd.DataFrame(fg_ids, columns=['fg_id']), type='fg_id')
 
     tablename = mysystem + "_" + mytype + "_raw"
     bbdb = postgres.connect_to_bbdb()

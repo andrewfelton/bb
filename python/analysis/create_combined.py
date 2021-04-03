@@ -1,6 +1,6 @@
 def create_combined_hitters(ls):
     import sys
-    sys.path.append('python/utilities')
+    sys.path.append('python/general')
     import utilities
     sys.path.append('python/munging')
     import postgres
@@ -86,11 +86,9 @@ def create_combined_hitters(ls):
     return combined_hitters
 
 
-
-
 def create_combined_pitchers(ls):
     import sys
-    sys.path.append('python/utilities')
+    sys.path.append('python/general')
     import utilities
     sys.path.append('python/munging')
     import postgres

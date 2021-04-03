@@ -1,4 +1,4 @@
-from python.utilities import selenium_utilities
+from python.general import selenium_utilities
 import time
 from bs4 import BeautifulSoup
 import pandas as pd
@@ -6,7 +6,7 @@ import unicodedata
 
 def scrape_bbref(urlprefix, year, urlsuffix, tableid):
 
-    sys.path.append('python/utilities')
+    sys.path.append('python/general')
     import selenium_utilities
     driver = selenium_utilities.start_driver()
 

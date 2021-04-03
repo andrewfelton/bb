@@ -1,29 +1,15 @@
 def get_eligibilities(league):
     import sys
-    sys.path.append('python/utilities')
+    sys.path.append('python/general')
     import postgres
     import pandas as pd
 
     bbdb = postgres.connect_to_bbdb()
     query = (
-            'SELECT pos_elig_sos.* '
-            'FROM reference.pos_elig_sos '+
-            'WHERE pos_elig_sos.YEAR=2020'
+            'SELECT fg_id, elig '
+            'FROM reference.player_names_ff '
     )
     df = pd.read_sql_query(query, bbdb)
-
-    def combine_eligibilities(row):
-        eligibilities = []
-        for pos in ['c', '1b', '2b', 'ss', '3b', 'of']:
-            if row['elig_' + pos] == True:
-                eligibilities.append(pos)
-        elig = ' '.join(eligibilities).strip()
-        if elig=='':
-            elig='ut'
-        return elig
-
-    df['elig'] = df.apply(lambda row: combine_eligibilities(row), axis=1)
-
     return df
 
 def update_eligibilities(df, league):

@@ -1,5 +1,5 @@
 import sys
-sys.path.append('python/utilities')
+sys.path.append('python/general')
 import selenium_utilities
 import postgres
 from bs4 import BeautifulSoup

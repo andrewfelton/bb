@@ -1,6 +1,6 @@
 def scrape_pod():
     import pandas as pd
-    sys.path.append('python/utilities')
+    sys.path.append('python/general')
     sys.path.append('python/munging')
     import postgres
     import player_names
@@ -23,18 +23,12 @@ def scrape_pod():
         pod_hitters[c] = pod_hitters[c].astype(str)
 
     # Check to confirm that all the fg_id are in the names table
-    missing = pd.merge(pod_hitters[['Name', 'fg_id']], names[['fg_id']], how='left', left_on='fg_id', right_on='fg_id', indicator=True)
-    missing_names = missing[missing['_merge']!='both']
-    if len(missing_names)>0:
-        print('Found some fg_id in Pod Projections that weren\'t in Names!')
-        for i in range(0, len(missing_names)):
-            print(missing_names.iloc[i,].to_list())
+    put_missing_in_GS(pod_hitters[['fg_id']], 'fg_id')
 
     command = 'TRUNCATE TABLE proj.pod_batters_raw'
     bbdb.execute(command)
     pod_hitters.to_sql('pod_batters_raw', bbdb, schema='proj', if_exists='append')
-
-
+    print('Uploaded pod_batters to the database')
 
 
 
@@ -52,16 +46,14 @@ def scrape_pod():
     )
     for c in ['Name', 'fg_id']:
         pod_pitchers[c] = pod_pitchers[c].astype(str)
+
     # Check to confirm that all the fg_id are in the names table
-    missing = pd.merge(pod_pitchers[['Name', 'fg_id']], names[['fg_id']], how='left', left_on='fg_id', right_on='fg_id', indicator=True)
-    missing_names = missing[missing['_merge']!='both']
-    if len(missing_names)>0:
-        print('Found some fg_id in Pod Projections that weren\'t in Names!')
-        for i in range(0, len(missing_names)):
-            print(missing_names.iloc[i,].to_list())
+    put_missing_in_GS(pod_pitchers[['fg_id']], 'fg_id')
 
     command = 'TRUNCATE TABLE proj.pod_pitchers_raw'
     bbdb.execute(command)
     pod_pitchers.to_sql('pod_pitchers_raw', bbdb, schema='proj', if_exists='append')
+    print('Uploaded pod_pitchers to the database')
 
 
+scrape_pod()

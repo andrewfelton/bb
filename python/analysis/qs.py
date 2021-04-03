@@ -1,7 +1,7 @@
 import sys
 sys.path.append('/Users/andrewfelton/Documents/bb/2021/python')
 from python.munging import import_bbref
-from python.utilities import postgres
+from python.general import postgres
 
 postgres.connect_to_bbdb()
 

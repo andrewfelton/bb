@@ -1,6 +1,6 @@
 def calc_z(df, ls, type):
     import sys
-    sys.path.append('python/utilities')
+    sys.path.append('python/general')
     import utilities
     sys.path.append('python/analysis')
     import elig
@@ -53,7 +53,7 @@ def calc_z(df, ls, type):
         if not('elig' in df.columns):
             eligibilities = elig.get_eligibilities('SoS')
             df = df.merge(eligibilities[['fg_id','elig']], on='fg_id', how='left')
-        df['catcher'] = df.apply(lambda row: 'c' in str(row['elig']), axis=1)
+        df['catcher'] = df.apply(lambda row: 'C' in str(row['elig']), axis=1)
         catchers = df[df['catcher']]
         catchers['rank'] = catchers['zar'].rank(ascending=False)
         catcher_repl = catchers.iloc[16]['zar']
@@ -79,8 +79,5 @@ def calc_z(df, ls, type):
     df['value'] = df.apply(lambda row: ((ls.num_teams * 260 * budget_split) * row['zar'] / sum_zar), axis=1)
 
     df = df.sort_values(by='value', ascending=False)
-
-    #return_cols = utilities.flatten([['fg_id'], [denom], counting_stats, rate_stats, ['zar', 'value']])
-    #df = df[return_cols]
     return df
 
