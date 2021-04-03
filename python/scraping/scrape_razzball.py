@@ -1,13 +1,13 @@
-import sys
-sys.path.append('/Users/andrewfelton/Documents/bb/2021/python')
-import selenium_utilities
+import os
 import time
 from bs4 import BeautifulSoup
 import pandas as pd
-from selenium.webdriver.common.action_chains import ActionChains
 from io import StringIO
 from datetime import date
-import os
+from selenium.webdriver.common.action_chains import ActionChains
+import sys
+sys.path.append('python/general')
+import selenium_utilities
 
 def scrape_razz(mytype, url):
     driver = selenium_utilities.start_driver()
@@ -59,8 +59,8 @@ def scrape_razz(mytype, url):
 
 
 
-scrape_razz(mytype='pitchers', url="https://razzball.com/steamer-pitcher-projections/")
-time.sleep(2)
-scrape_razz(mytype='batters', url="https://razzball.com/steamer-hitter-projections/")
+#scrape_razz(mytype='pitchers', url="https://razzball.com/steamer-pitcher-projections/")
+#time.sleep(2)
+#scrape_razz(mytype='batters', url="https://razzball.com/steamer-hitter-projections/")
 
-
+#scrape_razz(mytype='streamers', url="https://razzball.com/streamers/")
