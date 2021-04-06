@@ -2,6 +2,7 @@ def scrape_yahoo_roster(league_num='26574'):
     import sys
     sys.path.append('python/general')
     import selenium_utilities
+    import requests
     import postgres
     from bs4 import BeautifulSoup
     import pandas as pd
@@ -10,24 +11,24 @@ def scrape_yahoo_roster(league_num='26574'):
     import gspread
     import gspread_dataframe as gsdf
 
-    driver = selenium_utilities.start_driver()
-    league_url = 'https://baseball.fantasysports.yahoo.com/b1/' + league_num
-    driver.get(league_url + '/startingrosters')
-    print(driver.current_url)
-
-    bs_rosters = BeautifulSoup(driver.page_source, 'lxml')
+    league_url = 'https://baseball.fantasysports.yahoo.com/b1/' + league_num + '/startingrosters'
+    print('Scraping from '+league_url)
+    page = requests.get(league_url)
+    bs_rosters = BeautifulSoup(page.text, 'html.parser')
     main_div = bs_rosters.find('div', id='yspmaincontent')
     tables = main_div.find_all('div', {'class':'Grid-u-1-2 Pend-xl'})
 
     rosters = []
     for table in tables:
         #roster = []
-        owner = table.find('p').text
+        owner = table.find('p').find('a').text
+        print(owner)
         player_rows = table.find('table').find_all('tr')
         for player_row in player_rows:
             player = player_row.find('div').find('div')
             if (player!=None):
                 player = player.find('a')
+                print(player)
                 playerid = str(player['href'].split('/')[-1])
                 playername = player.text
                 rosters.append([owner, playerid, playername])
