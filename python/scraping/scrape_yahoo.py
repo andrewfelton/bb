@@ -1,6 +1,7 @@
 def scrape_yahoo_roster(league_num='26574'):
     import sys
     sys.path.append('python/general')
+    import postgres
     import selenium_utilities
     import requests
     import postgres
@@ -10,6 +11,7 @@ def scrape_yahoo_roster(league_num='26574'):
     import player_names
     import gspread
     import gspread_dataframe as gsdf
+    from datetime import date
 
     league_url = 'https://baseball.fantasysports.yahoo.com/b1/' + league_num + '/startingrosters'
     print('Scraping from '+league_url)
@@ -21,41 +23,46 @@ def scrape_yahoo_roster(league_num='26574'):
     rosters = []
     for table in tables:
         #roster = []
+        owner_id = table.find('p').find('a')['href'].split('/')[-1]
         owner = table.find('p').find('a').text
-        print(owner)
-        player_rows = table.find('table').find_all('tr')
+        # print('Scraping ' + owner)
+        player_rows = table.find('table').find('tbody').find_all('tr')
         for player_row in player_rows:
-            player = player_row.find('div').find('div')
-            if (player!=None):
-                player = player.find('a')
-                print(player)
+            tds = player_row.find_all('td')
+            td_pos = tds[0]
+            pos = td_pos.text
+            td_player = tds[1]
+            info_player = td_player.find('div', {'class':'ysf-player-name'})
+            if info_player.find('div', {'class':'emptyplayer'}) is not None:
+                rosters.append([owner, pos, 'empty', 'empty'])
+            else:
+                player = info_player.find('a')
+                #print(player)
                 playerid = str(player['href'].split('/')[-1])
                 playername = player.text
-                rosters.append([owner, playerid, playername])
+                rosters.append([owner_id, owner, pos, playerid, playername])
 
-    rosters = pd.DataFrame(rosters, columns=['Owner', 'yahoo_id', 'name'])
-
-
-    player_names.put_missing_in_GS(id_list = rosters, type='yahoo_id')
+    rosters = pd.DataFrame(rosters, columns=['owner_id', 'Team', 'pos', 'yahoo_id', 'name'])
+    #player_names.put_missing_in_GS(id_list=rosters[rosters['yahoo_id']!='empty'], type='yahoo_id')
 
 
     names = player_names.get_player_names()
-    rosters = pd.merge(
-        rosters[['Owner', 'yahoo_id']],
+    rosters = rosters.merge(
         names[['yahoo_id', 'fg_id', 'name']],
         on='yahoo_id',
         how='left'
     )
-    rosters = rosters[['fg_id', 'name', 'Owner']]
+    today = date.today().strftime("%Y%m%d")
+    rosters['date'] = today
+    rosters = rosters[['date', 'owner_id', 'Team', 'pos', 'fg_id', 'yahoo_id']]
 
+    today = date.today().strftime("%Y%m%d")
+    basename = "/Users/andrewfelton/Documents/bb/2021/data/yahoo/rosters"
+    new_file = basename + "_" + today + ".csv"
+    rosters.to_csv(new_file)
 
-
-
-    gc = gspread.service_account(filename='./bb-2021-2b810d2e3d25.json')
-    sh = gc.open('BB 2021 Legacy')
-    gc_yahoo_rosters = sh.worksheet('SoS Legacy Rosters')
-    gsdf.set_with_dataframe(gc_yahoo_rosters, rosters)
-
-
+    bbdb = postgres.connect_to_bbdb()
+    rosters.to_sql('legacy', con=bbdb, schema='rosters', if_exists='replace', index=False)
+    print('Uploaded to database')
 
 #scrape_yahoo_roster(league_num='26574')

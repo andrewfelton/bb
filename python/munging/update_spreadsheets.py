@@ -3,9 +3,7 @@ sys.path.append('python/general')
 import postgres
 import pandas as pd
 import gspread
-import gspread_dataframe
-
-postgres.start_postgres()
+import gspread_dataframe as gsdf
 
 def post_sos_d2_drafts(draftnums):
 
@@ -22,13 +20,26 @@ def post_sos_d2_drafts(draftnums):
     bb2021 = gc.open("BB 2021 SoS")
     sheettitle = "D2 drafts"
     bb2021.values_clear(sheettitle + "!A:Z")
-    gspread_dataframe.set_with_dataframe(bb2021.worksheet(sheettitle), df)
+    gsdf.set_with_dataframe(bb2021.worksheet(sheettitle), df)
     combined = bb2021.worksheet('Combined')
     combined.update
     print('Updated combined spreadsheet')
 
 
-def update_inseason_sheet(leagues):
+def inseason_standings_sos():
+    gc = gspread.service_account(filename='./bb-2021-2b810d2e3d25.json')
+    bb2021 = gc.open("BB 2021 InSeason")
+    bbdb = postgres.connect_to_bbdb()
+
+    # Update standings
+    ff_standings = pd.read_sql_query('SELECT * FROM tracking.standings_sos', con=bbdb, parse_dates=['date'])
+    sheettitle = "Standings"
+    bb2021.values_clear(sheettitle + "!A:Z")
+    gsdf.set_with_dataframe(bb2021.worksheet(sheettitle), ff_standings)
+
+
+
+
 
 
 

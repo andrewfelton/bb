@@ -2,10 +2,15 @@ import sys
 from scraping import scrape_fg_projections
 from scraping import scrape_ff
 from scraping import scrape_razzball
-#from munging import update_spreadsheets
+from scraping import scrape_yahoo
+from munging import update_spreadsheets
 from analysis import valuations
 from general import classes
 from general import utilities
+import pandas as pd
+
+pd.set_option('display.max_columns', None)
+pd.set_option('display.precision', 2)
 
 print('Running '+sys.argv[0])
 league_sos = classes.league('SoS')
@@ -31,6 +36,8 @@ if '-fg' in sys.argv or '-all' in sys.argv:
 print('Updating for ' + league_sos.league_name)
 rosters_sos = scrape_ff.rosters(league_sos)
 
+print('Updating for ' + league_legacy.league_name)
+rosters_legacy = scrape_yahoo.scrape_yahoo_roster(league_num='26574')
 
 # Post updates to Google Sheets
 if '-v' in sys.argv or '-all' in sys.argv:
@@ -39,10 +46,30 @@ if '-v' in sys.argv or '-all' in sys.argv:
     valuations.update_inseason_valuations(league_sos, league_legacy)
     print('Created and uploaded valuations')
 
+    scrape_ff.scrape_standings(league_sos)
+    update_spreadsheets.inseason_standings_sos()
+    print('Updated the standings')
+
 
 # print upcoming streamers
 if '-razz' in sys.argv or '-all' in sys.argv:
-    scrape_razzball.scrape_razz(mytype='streamers', url="https://razzball.com/streamers/")
+    razz_streamers = scrape_razzball.scrape_razz(mytype='streamers', url="https://razzball.com/streamers/")
 
+    # print the best streamers
+    best_streamers = razz_streamers[razz_streamers['Team'].isna()].sort_values(by='qs', ascending=False)
+    best_streamers = best_streamers[['fg_id', 'name', 'opp', 'date', 'value', 'qs', 'era']]
+    print('Five best upcoming prob of QS:')
+    print(best_streamers.head(5))
 
+    for date in ['today','tomorrow']:
+        razz_streamers = scrape_razzball.scrape_razz(mytype='hittertron-'+date, url="https://razzball.com/hittertron-"+date)
+        best_hitters = razz_streamers[razz_streamers['Team'].isna()]
 
+        # print the best streamers
+        print(date + '\'s five most valuable hitters:')
+        best_hitters = best_hitters.sort_values(by='value', ascending=False)
+        print(best_hitters[['fg_id', 'name', 'opp', 'date', 'value']].head(5))
+
+        print(date + '\'s five most likely to SB:')
+        best_hitters = razz_streamers[razz_streamers['Team'].isna()].sort_values(by='sb', ascending=False)
+        print(best_hitters[['fg_id', 'name', 'opp', 'date', 'value', 'sb']].head(5))

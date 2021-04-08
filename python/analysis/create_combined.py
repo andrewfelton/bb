@@ -1,4 +1,4 @@
-def create_combined_hitters(ls):
+def create_combined_hitters(ls, pa=0):
     import sys
     sys.path.append('python/general')
     import utilities
@@ -61,6 +61,8 @@ def create_combined_hitters(ls):
     for stat in ['pa']:
         t = weighted_average(df_pa, stat, 'sys_weight', 'fg_id')
         combined_hitters = combined_hitters.merge(t, on='fg_id')
+        if (pa>0):
+            combined_hitters['pa'] = pa
 
     stats_pa = []
     for stat in ls.hitting_counting_stats:

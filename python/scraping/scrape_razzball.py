@@ -4,9 +4,6 @@ from datetime import datetime
 import time
 from bs4 import BeautifulSoup
 import pandas as pd
-from io import StringIO
-import re
-from selenium.webdriver.common.action_chains import ActionChains
 import sys
 sys.path.append('python/general')
 import selenium_utilities
@@ -38,7 +35,6 @@ def scrape_razz(mytype, url):
     soup = BeautifulSoup(driver.page_source, 'lxml')
     table = soup.find('table', id='neorazzstatstable')
 
-    trows = table.findAll('tr')
     streamers = []
 
     colnames = []
@@ -48,58 +44,52 @@ def scrape_razz(mytype, url):
         colname = th.text.lower()
         colname = colname.replace('#', 'rank').replace('$','value').replace('!','').replace('%','pct_')
         colnames.append(colname)
+    # Insert Razz ID before Name
+    colnames.insert(colnames.index('name'), 'razz_id')
 
-
+    trows = table.findAll('tr')
     for trow in trows:
         streamer = []
         tds = trow.findAll('td')
-        if [] == list(set(trow['class']) & set(['class=sorter-head', 'tablesorter-headerRow', 'tablesorter-ignoreRow'])):
-            # These are the same for both hitters and pitchers
-            player_url = tds[1].find('a')['href']
-            player_id = player_url.split('/')[4]
-            player_id = 660271 if (player_id == 6602710) else player_id # Manual correction for Ohtani
-            streamer.append(player_id) # Razz ID
-            player_name = tds[1].find('a').text
-            streamer.append(player_name)  # player name
+        append = True
 
-            # Different for hitters and pitchers
-            if 'streamers' in url:
-                streamer.append(tds[3].text) # Opponent
-                date_str =tds[4].text + '/2021'
-                streamdate = datetime.strptime(date_str, '%m/%d/%Y')
-                streamer.append(streamdate) # Date
-                streamer.append(float(tds[8].text)) # value
-                streamer.append(float(tds[9].text)) # QS
-                streamer.append(float(tds[12].text)) # IP
-                streamer.append(float(tds[15].text)) # SO
-                streamer.append(float(tds[21].text)) # ERA
-                streamer.append(float(tds[22].text)) # WHIP
-                razz_columns = ['razz_id', 'name', 'opponent', 'date', 'value', 'qs', 'ip', 'so', 'era', 'whip']
-            elif 'hittertron' in url and tds[13].text!="":
-                streamer.append(tds[9].text) # Opponent
-                date_str =tds[6].text + '/2021'
-                streamdate = datetime.strptime(date_str, '%m/%d/%Y')
-                streamer.append(streamdate) # Date
-                try:
-                    streamer.append(float(tds[8].text)) # value
-                except ValueError:
-                    print(trow)
-                streamer.append(float(tds[13].text)) # PA
-                streamer.append(float(tds[15].text)) # H
-                streamer.append(float(tds[16].text)) # R
-                streamer.append(float(tds[17].text)) # HR
-                streamer.append(float(tds[18].text)) # RBI
-                streamer.append(float(tds[19].text)) # SB
-                streamer.append(float(tds[20].text)) # BB
-                streamer.append(float(tds[23].text)) # OBP
-                streamer.append(float(tds[24].text)) # SLG
-                streamer.append(float(tds[25].text)) # OPS
-                razz_columns = ['razz_id', 'name', 'opponent', 'date', 'value', 'pa', 'h', 'r', 'hr', 'rbi', 'sb', 'bb', 'obp', 'slg', 'ops']
+        if [] == list(set(trow['class']) &
+                      set(['class=sorter-head', 'tablesorter-headerRow', 'tablesorter-ignoreRow'])):
+            for loc, td in enumerate(tds):
+                if (loc+1)==colnames.index('name'):
+                    player_url = td.find('a')['href']
+                    player_id = player_url.split('/')[4]
+                    player_id = 660271 if (player_id == 6602710) else player_id  # Manual correction for Ohtani
+                    streamer.append(player_id)  # Razz ID
+                    player_name = td.find('a').text
+                    streamer.append(player_name)  # player name
+                elif (loc+1)==colnames.index('date'):
+                    date_str =td.text + '/2021'
+                    streamdate = datetime.strptime(date_str, '%m/%d/%Y')
+                    streamer.append(streamdate) # Date
+                else:
+                    try:
+                        value = float(td.text)
+                    except ValueError:
+                        value = td.text
+                    streamer.append(value)
+            for var in ['pa', 'ip']:
+                if var in colnames and (
+                        str(streamer[colnames.index(var)])=='' or
+                        str(streamer[colnames.index(var)])=='None'
+                ):
+                    append = False
+            if streamer[colnames.index('razz_id')]==1.0:
+                append = False
+            if append:
+                streamers.append(streamer)
+    df_streamers = pd.DataFrame(streamers, columns=colnames)
+    df_streamers.drop(df_streamers[df_streamers['razz_id']==1.0].index, inplace=True)
 
-            streamers.append(streamer)
+    # fix date
+    #date_str = tds[4].text + '/2021'
+    #streamdate = datetime.strptime(date_str, '%m/%d/%Y')
 
-
-    df_streamers = pd.DataFrame(streamers, columns=razz_columns)
     names = player_names.get_player_names()
     df_streamers = df_streamers.merge(right=names[['mlb_id', 'fg_id']], how='left', left_on='razz_id', right_on='mlb_id')
     df_streamers['fg_id'] = df_streamers.apply(lambda row: row['fg_id'] if str(row['fg_id'])!='nan' else row['razz_id'], axis=1)

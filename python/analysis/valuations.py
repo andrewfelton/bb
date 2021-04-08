@@ -16,10 +16,16 @@ def create_combined_hitter_valuations(league):
         combined_hitters = calculations.calc_z(df=combined_hitters, ls=league, type='hitting')
         combined_hitters['sample'] = combined_hitters.apply(lambda row: row.zar > 0, axis=1)
 
-    columns = ['name','fg_id','type','pa',
+    combined_hitters_600 = create_combined.create_combined_hitters(league, pa=600)
+    combined_hitters_600['type']='B'
+    combined_hitters_600 = combined_hitters_600.merge(combined_hitters[['fg_id', 'sample']], how='left', on='fg_id')
+    combined_hitters_600 = calculations.calc_z(df=combined_hitters_600, ls=league, type='hitting')
+    combined_hitters = combined_hitters.merge(combined_hitters_600[['fg_id', 'value']].rename(columns={'value':'value_600'}), how='left', on='fg_id')
+
+    columns = ['name','fg_id','type','elig','pa',
                league.hitting_counting_stats,
                league.hitting_rate_stats,
-               'zar','value']
+               'zar','value','value_600']
     columns = utilities.flatten(columns)
     combined_hitters = combined_hitters[columns]
     return combined_hitters
@@ -128,29 +134,35 @@ def update_inseason_valuations(league_sos, league_legacy):
     import gspread_dataframe as gsdf
 
     sos_hitters = create_combined_hitter_valuations(league=league_sos) \
-        .rename(columns={'zar': 'zar_sos', 'value': 'value_sos'})
+        .rename(columns={'zar': 'zar_sos', 'value': 'value_sos', 'value_600': 'value_600_sos'})
     legacy_hitters = create_combined_hitter_valuations(league=league_legacy) \
-        .rename(columns={'zar': 'zar_legacy', 'value': 'value_legacy'})
+        .rename(columns={'zar': 'zar_legacy', 'value': 'value_legacy', 'value_600': 'value_600_legacy'})
     legacy_extra_columns = list(set(legacy_hitters.columns)
                                 .difference(sos_hitters.columns))
     legacy_extra_columns = utilities.flatten(['fg_id', legacy_extra_columns])
 
-    columns = ['name', 'fg_id', 'type', 'pa',
+    columns = ['name', 'fg_id', 'type', 'elig', 'pa',
                league_sos.hitting_counting_stats,
                league_sos.hitting_counting_stats,
                league_legacy.hitting_rate_stats,
                league_legacy.hitting_rate_stats,
-               'zar_sos', 'value_sos', 'zar_legacy', 'value_legacy']
+               'zar_sos', 'value_sos', 'value_600_sos', 'zar_legacy', 'value_legacy', 'value_600_legacy']
     columns = utilities.flatten(columns)
     combined_hitters = sos_hitters.merge(legacy_hitters[legacy_extra_columns], on='fg_id')
+    combined_hitters.drop_duplicates(subset=['fg_id'], inplace=True)
 
+    # Merge in the ownership
     bbdb = postgres.connect_to_bbdb()
-    sos_rosters = pd.read_sql('SELECT * FROM rosters.sos', con=bbdb)
-    sos_rosters = sos_rosters[['fg_id', 'Team']].rename(columns={'Team': 'sos_team'})
+    sos_rosters = pd.read_sql('SELECT fg_id, sos."Team" FROM rosters.sos', con=bbdb)
     sos_rosters[['fg_id']] = sos_rosters[['fg_id']].astype(str)
-
     combined_hitters = combined_hitters.merge(sos_rosters, how='left', on='fg_id')
 
+    legacy_rosters = pd.read_sql('SELECT fg_id, legacy."Team" as legacy_team FROM rosters.legacy', con=bbdb)
+    legacy_rosters[['fg_id']] = legacy_rosters[['fg_id']].astype(str)
+    combined_hitters = combined_hitters.merge(legacy_rosters, how='left', on='fg_id')
+
+
+    # Pitchers
     sos_pitchers = create_combined_pitcher_valuations(league=league_sos) \
         .rename(columns={'zar': 'zar_sos', 'value': 'value_sos'})
     legacy_pitchers = create_combined_pitcher_valuations(league=league_legacy) \

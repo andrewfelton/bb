@@ -75,14 +75,13 @@ def rosters(league, upload_to_db=True):
         for player in missing_fg_id.values.tolist():
             print(player)
 
-
     file_rosters = '/Users/andrewfelton/Documents/bb/2021/data/rosters/rosters_'+league_num+'_'+str_today+'.csv'
     df_export.to_csv(file_rosters, index=False)
     print('Saved rosters to ' + file_rosters)
 
     if upload_to_db:
         bbdb = postgres.connect_to_bbdb()
-        df_export.to_sql('sos', con=bbdb, schema='rosters', if_exists='replace')
+        df_export.to_sql('sos', con=bbdb, schema='rosters', if_exists='replace', index=False)
         print('Uploaded to database')
 
     return df_export
@@ -109,7 +108,7 @@ def team_rosters():
     soup = BeautifulSoup(page.text, 'html.parser')
     league_names_divs = soup.find_all('div', {'class':'league-name'})
     for league_names_div in league_names_divs:
-        print(league_names_div)
+        #print(league_names_div)
 
         team_roster_url = 'https://www.fleaflicker.com' + league_name_div.find('a')['href']
         league_num = team_roster_url.split('/')[-1]
@@ -120,3 +119,41 @@ def team_rosters():
 
 
 
+def scrape_standings(league):
+    import sys
+    import requests
+    import pandas as pd
+    from bs4 import BeautifulSoup
+    import datetime
+    sys.path.append('python/general')
+    import postgres
+
+
+    assert(league.league_platform == 'fleaflicker')
+    league_num = league.league_num
+
+    roster_url = 'https://www.fleaflicker.com/mlb/leagues/'+league_num
+    page = requests.get(roster_url)
+    soup = BeautifulSoup(page.text, 'html.parser')
+    main_div = soup.find('div', id='body-center-main')
+    tables = main_div.find('table')
+    trows = tables.find_all('tr')
+    standings = []
+    for trow in trows[2:]:
+        standing = []
+        tds = trow.find_all('td')
+        standing.append(tds[0].text)
+        for i in range(3,15):
+            standing.append(tds[i].find('span').text)
+        standings.append(standing)
+    df_standings = pd.DataFrame(standings, columns=['team','hr','r','rbi','sb','obp','ops','so','sv','hld','era','whip','qs'])
+
+    today = datetime.date.today()
+    df_standings['date'] = today
+    str_today = str(today)
+
+    bbdb = postgres.connect_to_bbdb()
+    df_standings.to_sql(name='standings_sos', con=bbdb, schema='tracking', index=False, if_exists='replace')
+
+
+# scrape_standings(league_sos)

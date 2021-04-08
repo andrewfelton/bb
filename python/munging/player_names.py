@@ -218,6 +218,13 @@ def push_player_names_to_gs():
 
 
 def pull_player_names_from_gs():
+	import sys
+	sys.path.append('python/general')
+	import postgres
+	import pandas as pd
+	import gspread
+	import gspread_dataframe as gsdf
+
 	bbdb = postgres.connect_to_bbdb()
 	gc = gspread.service_account(filename='./bb-2021-2b810d2e3d25.json')
 	sh = gc.open("BB 2021 Name Matching").worksheet('Player Names')

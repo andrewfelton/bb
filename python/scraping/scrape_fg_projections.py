@@ -85,11 +85,20 @@ def scrape_fg_projections(type, system, mytype, mysystem):
 
 
 def scrape_all_fg_projections():
-    scrape_fg_projections(type="bat", system="fangraphsdc", mytype="batters", mysystem="fg_dc")
-    scrape_fg_projections(type="pit", system="fangraphsdc", mytype="pitchers", mysystem="fg_dc")
-    scrape_fg_projections(type="bat", system="thebat", mytype="batters", mysystem="thebat")
-    scrape_fg_projections(type="pit", system="thebat", mytype="pitchers", mysystem="thebat")
-    scrape_fg_projections(type="bat", system="thebatx", mytype="batters", mysystem="thebatx")
+    # Pre-season
+    # scrape_fg_projections(type="bat", system="fangraphsdc", mytype="batters", mysystem="fg_dc")
+    # scrape_fg_projections(type="pit", system="fangraphsdc", mytype="pitchers", mysystem="fg_dc")
+    # scrape_fg_projections(type="bat", system="thebat", mytype="batters", mysystem="thebat")
+    # scrape_fg_projections(type="pit", system="thebat", mytype="pitchers", mysystem="thebat")
+    # scrape_fg_projections(type="bat", system="thebatx", mytype="batters", mysystem="thebatx")
+
+    # In-season (ROS)
+    scrape_fg_projections(type="bat", system="rfangraphsdc", mytype="batters", mysystem="fg_dc")
+    scrape_fg_projections(type="pit", system="rfangraphsdc", mytype="pitchers", mysystem="fg_dc")
+    scrape_fg_projections(type="bat", system="rthebat", mytype="batters", mysystem="thebat")
+    scrape_fg_projections(type="pit", system="rthebat", mytype="pitchers", mysystem="thebat")
+    scrape_fg_projections(type="bat", system="rthebatx", mytype="batters", mysystem="thebatx")
+
 
 # for testing
 if (1==0):
