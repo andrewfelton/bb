@@ -59,7 +59,7 @@ def scrape_razz(mytype, url):
                 if (loc+1)==colnames.index('name'):
                     player_url = td.find('a')['href']
                     player_id = player_url.split('/')[4]
-                    player_id = 660271 if (player_id == 6602710) else player_id  # Manual correction for Ohtani
+                    player_id = '660271' if (str(player_id) == '6602710') else player_id  # Manual correction for Ohtani
                     streamer.append(player_id)  # Razz ID
                     player_name = td.find('a').text
                     streamer.append(player_name)  # player name
@@ -73,6 +73,8 @@ def scrape_razz(mytype, url):
                     except ValueError:
                         value = td.text
                     streamer.append(value)
+
+            # Some times there are entries with missing values -- do not include those in the dataframe
             for var in ['pa', 'ip']:
                 if var in colnames and (
                         str(streamer[colnames.index(var)])=='' or
@@ -80,6 +82,8 @@ def scrape_razz(mytype, url):
                 ):
                     append = False
             if streamer[colnames.index('razz_id')]==1.0:
+                append = False
+            if str(streamer[colnames.index('value')])=='':
                 append = False
             if append:
                 streamers.append(streamer)
@@ -111,7 +115,8 @@ def scrape_razz(mytype, url):
 
     # Close it down
     driver.close()
-    selenium_utilities.stop_selenium('bbsel')
+    time.sleep(1)
+    #selenium_utilities.stop_selenium('bbsel')
 
     return df_streamers
 
