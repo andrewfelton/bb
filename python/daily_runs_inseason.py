@@ -63,13 +63,14 @@ if '-razz' in sys.argv or '-all' in sys.argv:
 
     for date in ['today','tomorrow']:
         razz_streamers = scrape_razzball.scrape_razz(mytype='hittertron-'+date, url="https://razzball.com/hittertron-"+date)
-        best_hitters = razz_streamers[razz_streamers['Team'].isna()]
+        available_hitters = razz_streamers[razz_streamers['Team'].isna()].sort_values(by='value', ascending=False)
+        my_hitters = razz_streamers[razz_streamers['Team']=='JohnnyFang\'s Team']
 
         # print the best streamers
         print(date + '\'s five most valuable hitters:')
-        best_hitters = best_hitters.sort_values(by='value', ascending=False)
-        print(best_hitters[['fg_id', 'name', 'opp', 'date', 'value']].head(5))
+        best_hitters = available_hitters.head(5).append(my_hitters).sort_values(by='value', ascending=False)
+        print(best_hitters[['fg_id', 'name', 'opp', 'pitcher', 'value']])
 
         print(date + '\'s five most likely to SB:')
         best_hitters = razz_streamers[razz_streamers['Team'].isna()].sort_values(by='sb', ascending=False)
-        print(best_hitters[['fg_id', 'name', 'opp', 'date', 'value', 'sb']].head(5))
+        print(best_hitters[['fg_id', 'name', 'opp', 'value', 'sb']].head(5))
