@@ -28,5 +28,4 @@ league = league_sos
 
 pd.set_option('display.max_columns', None)
 pd.set_option('display.precision', 2)
-
-display.min_rows : int
+pd.set_option('display.min_rows', 5)
