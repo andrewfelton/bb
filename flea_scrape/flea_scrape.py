@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 from requests import get
 from requests.exceptions import RequestException
 from contextlib import closing
