@@ -2,6 +2,7 @@ import sys
 from scraping import scrape_fg_projections
 from scraping import scrape_ff
 from scraping import scrape_razzball
+from scraping import scrape_prospectus
 from scraping import scrape_yahoo
 from munging import update_spreadsheets
 from analysis import valuations
@@ -16,12 +17,18 @@ print('Running '+sys.argv[0])
 league_sos = classes.league('SoS')
 league_legacy = classes.league('Legacy')
 
-
 # Scrape latest projections
 if '-fg' in sys.argv or '-all' in sys.argv:
     print('Scraping FanGraphs projections...')
     scrape_fg_projections.scrape_all_fg_projections()
     print('Finished scraping FanGraphs')
+
+if '-bp' in sys.argv or '-all' in sys.argv:
+    print('Scraping Baseball Prospectus metrics...')
+    scrape_prospectus.scrape_bp_pitching()
+    print('Finished scraping BP')
+
+
 
 # Update combined projections
 
