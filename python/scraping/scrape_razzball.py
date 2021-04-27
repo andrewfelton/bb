@@ -104,7 +104,7 @@ def scrape_razz(mytype, url):
     # Save on computer as .csv file
     mysystem = 'razz'
     today = date.today().strftime("%Y%m%d")
-    basename = "/Users/andrewfelton/Documents/bb/2021/data/" + mysystem + '/' + mysystem + "_" + mytype
+    basename = "/Users/andrewfelton/Documents/bb/bb-2021/data/" + mysystem + '/' + mysystem + "_" + mytype
     new_file = basename + "_" + today + ".csv"
     df_streamers.to_csv(new_file)
 

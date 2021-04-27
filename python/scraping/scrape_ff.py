@@ -75,7 +75,7 @@ def rosters(league, upload_to_db=True):
         for player in missing_fg_id.values.tolist():
             print(player)
 
-    file_rosters = '/Users/andrewfelton/Documents/bb/2021/data/rosters/rosters_'+league_num+'_'+str_today+'.csv'
+    file_rosters = '/Users/andrewfelton/Documents/bb/bb-2021/data/rosters/rosters_'+league_num+'_'+str_today+'.csv'
     df_export.to_csv(file_rosters, index=False)
     print('Saved rosters to ' + file_rosters)
 
@@ -156,4 +156,4 @@ def scrape_standings(league):
     df_standings.to_sql(name='standings_sos', con=bbdb, schema='tracking', index=False, if_exists='replace')
 
 
-# scrape_standings(league_sos)
+# crape_standings(league=league_sos)

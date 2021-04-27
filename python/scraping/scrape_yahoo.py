@@ -57,7 +57,7 @@ def scrape_yahoo_roster(league_num='26574'):
     rosters = rosters[['date', 'owner_id', 'Team', 'pos', 'fg_id', 'yahoo_id']]
 
     today = date.today().strftime("%Y%m%d")
-    basename = "/Users/andrewfelton/Documents/bb/2021/data/yahoo/rosters"
+    basename = "/Users/andrewfelton/Documents/bb/bb-2021/data/yahoo/rosters"
     new_file = basename + "_" + today + ".csv"
     rosters.to_csv(new_file)
 

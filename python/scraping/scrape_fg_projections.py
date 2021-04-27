@@ -44,7 +44,7 @@ def scrape_fg_projections(type, system, mytype, mysystem):
     btn_dl_projections.click()
     time.sleep(3)
 
-    basepath = "/Users/andrewfelton/Documents/bb/2021"
+    basepath = "/Users/andrewfelton/Documents/bb/bb-2021"
     dl_file = "/Users/andrewfelton/Downloads/docker/FanGraphs\ Leaderboard.csv"
 
     today = date.today().strftime("%Y%m%d")
