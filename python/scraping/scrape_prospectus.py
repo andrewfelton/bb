@@ -21,11 +21,14 @@ def scrape_bp_pitching():
 
     dl_btn = driver.find_element_by_xpath('//*[@id="app"]/div[2]/div/div[3]/div[1]/div[2]/button')
     dl_btn.click()
+    time.sleep(4)
 
     today = date.today().strftime("%Y%m%d")
-
     basepath = "/Users/andrewfelton/Documents/bb/bb-2021"
-    dl_file = "/Users/andrewfelton/Downloads/docker/bp_export_"+today+".csv"
+    dl_file = "/Users/andrewfelton/Downloads/docker/bp_export_" + today + ".csv"
+
+    assert os.path.isfile(dl_file)
+
     new_file = basepath + "/data/bp/bp_pitchers_" + today + ".csv"
     stream_command = os.popen('mv ' + dl_file + ' ' + new_file)
 

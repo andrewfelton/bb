@@ -39,6 +39,9 @@ def inseason_standings_sos():
 
 
 
+def relievers():
+    return 1
+    
 
 
 

@@ -4,6 +4,7 @@ def calc_z(df, ls, type):
     import utilities
     sys.path.append('python/analysis')
     import elig
+    import json
 
     assert type in ['hitting', 'batting', 'pitching']
     if (type=='batting' or type=='hitting'):
@@ -79,5 +80,6 @@ def calc_z(df, ls, type):
     df['value'] = df.apply(lambda row: ((ls.num_teams * 260 * budget_split) * row['zar'] / sum_zar), axis=1)
 
     df = df.sort_values(by='value', ascending=False)
+
     return df
 

@@ -109,10 +109,6 @@ def scrape_ff_names():
 	import time
 	import unidecode
 
-	# pitchers
-	# 'https://www.fleaflicker.com/mlb/leagues/23172/players?season=2021&statType=1&sortMode=1&isFreeAgent=false&position=1536&tableSortName=pv7&tableSortDirection=DESC'
-	# 'https://www.fleaflicker.com/mlb/leagues/23172/players?season=2021&statType=1&sortMode=1&position=1536&isFreeAgent=false&tableSortDirection=DESC&tableSortName=pv7&tableOffset=20'
-
 	pitcher_base_url = 'https://www.fleaflicker.com/mlb/leagues/23172/players?season=2021&statType=1&sortMode=1&position=1536&isFreeAgent=false&tableSortDirection=DESC&tableSortName=pv7&tableOffset='
 	hitter_base_url  = 'https://www.fleaflicker.com/mlb/leagues/23172/players?season=2021&statType=1&sortMode=1&position=511&isFreeAgent=false&tableSortDirection=DESC&tableSortName=pv7&tableOffset='
 
@@ -277,3 +273,4 @@ def scrape_sfb_names():
 	bbdb.execute(command)
 	sfb_names.to_sql(tablename, bbdb, schema='reference', if_exists='append')
 
+# ff_names = scrape_ff_names()
