@@ -156,4 +156,4 @@ def scrape_standings(league):
     df_standings.to_sql(name='standings_sos', con=bbdb, schema='tracking', index=False, if_exists='replace')
 
 
-# crape_standings(league=league_sos)
+# scrape_standings(league=league_sos)
