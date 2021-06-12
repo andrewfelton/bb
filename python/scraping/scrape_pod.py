@@ -8,7 +8,9 @@ def scrape_pod():
 
     names = player_names.get_player_names()
 
-
+    # -------------------------------
+    # EXTRACT
+    # -------------------------------
     pod_file_path = '/Users/andrewfelton/Documents/bb/2021/data/pod/pod_projections.xlsx'
     pod_hitters = pd.read_excel(
         pod_file_path,
@@ -19,11 +21,19 @@ def scrape_pod():
             'OPS', 'ISO', 'wOBA', 'BB_PCT', 'K_PCT', 'BABIP', 'GB_PCT',
             'LD_PCT', 'FB_PCT', 'HR_FB']
     )
+
+    # -------------------------------
+    # TRANSFORM
+    # -------------------------------
     for c in ['Name', 'fg_id', 'Age', 'Lg', 'TM', 'Position', 'Lineup Spot']:
         pod_hitters[c] = pod_hitters[c].astype(str)
 
     # Check to confirm that all the fg_id are in the names table
     put_missing_in_GS(pod_hitters[['fg_id']], 'fg_id')
+
+    # -------------------------------
+    # LOAD
+    # -------------------------------
 
     command = 'TRUNCATE TABLE proj.pod_batters_raw'
     bbdb.execute(command)
