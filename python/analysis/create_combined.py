@@ -24,27 +24,33 @@ def create_combined_hitters(ls, pa=0):
             ') AS proj'
     )
     df = pd.read_sql_query(query, bbdb)
+    df.loc[df['fg_id'] == 'sa3011918', 'fg_id'] = '27506'
 
     query_pa = (
             'SELECT proj.* FROM (' +
             'SELECT \'fg_dc\' as source, fg_id, pa ' +
             'FROM proj.fg_dc_batters ' +
-            'UNION ' +
-            'SELECT \'pod\' as source, fg_id, pa ' +
-            'FROM proj.pod_batters ' +
+#            'UNION ' +
+#            'SELECT \'pod\' as source, fg_id, pa ' +
+#            'FROM proj.pod_batters ' +
             ') AS proj'
     )
     df_pa = pd.read_sql_query(query_pa, bbdb)
-
+    df_pa.loc[df_pa['fg_id'] == 'sa3011918', 'fg_id'] = '27506'
 
     query_teams = 'SELECT playerid as fg_id, fg_dc_batters_raw."Team" as team FROM proj.fg_dc_batters_raw'
     df_teams = pd.read_sql_query(query_teams, bbdb)
+    df_teams.loc[df_teams['fg_id'] == 'sa3011918', 'fg_id'] = '27506'
 
     weights = {'system': ['fg_dc', 'thebat', 'thebatx', 'pod'],
-               'sys_weight': [1, 1, 1.2, 1]}
+               'sys_weight': [1, 1, 1.2, .6]}
     weights = pd.DataFrame(weights)
     df = df.merge(right=weights, how='left', left_on='source', right_on='system')
-    df_pa = df_pa.merge(right=weights, how='left', left_on='source', right_on='system')
+
+    weights_pa = {'system': ['fg_dc', 'pod'],
+               'sys_weight': [1, 0]}
+    weights_pa = pd.DataFrame(weights_pa)
+    df_pa = df_pa.merge(right=weights_pa, how='left', left_on='source', right_on='system')
 
     def weighted_average(df,data_col,weight_col,by_col):
         df['_data_times_weight'] = df[data_col]*df[weight_col]
@@ -112,8 +118,8 @@ def create_combined_pitchers(ls):
     query_ip = (
             'SELECT proj.* FROM (' +
             'SELECT \'fg_dc\' as source, fg_id, ip FROM proj.fg_dc_pitchers ' +
-            'UNION ' +
-            'SELECT \'pod\' as source, fg_id, ip FROM proj.pod_pitchers ' +
+ #           'UNION ' +
+ #           'SELECT \'pod\' as source, fg_id, ip FROM proj.pod_pitchers ' +
             ') AS proj'
     )
     df_ip = pd.read_sql_query(query_ip, bbdb)
@@ -129,10 +135,14 @@ def create_combined_pitchers(ls):
 
 
     weights = {'system': ['fg_dc', 'thebat', 'thebatx', 'pod'],
-               'sys_weight': [1, 1, 1.2, 1]}
+               'sys_weight': [1, 1, 1.2, .5]}
     weights = pd.DataFrame(weights)
     df = df.merge(right=weights, how='left', left_on='source', right_on='system')
-    df_ip = df_ip.merge(right=weights, how='left', left_on='source', right_on='system')
+
+    weights_ip = {'system': ['fg_dc', 'thebat', 'thebatx', 'pod'],
+               'sys_weight': [1, 0, 0, 0]}
+    weights_ip = pd.DataFrame(weights_ip)
+    df_ip = df_ip.merge(right=weights_ip, how='left', left_on='source', right_on='system')
 
     def weighted_average(df,data_col,weight_col,by_col):
         df['_data_times_weight'] = df[data_col]*df[weight_col]
