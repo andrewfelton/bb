@@ -18,3 +18,15 @@ def get_ff_ownership():
     ff_ownership = pd.read_sql('SELECT * FROM rosters.sos', bbdb)
     return ff_ownership
 
+
+def get_legacy_ownership():
+    import pandas as pd
+    import sys
+    sys.path.append('python/general')
+    import postgres
+
+    bbdb = postgres.connect_to_bbdb()
+    ff_ownership = pd.read_sql('SELECT * FROM rosters.legacy', bbdb)
+    return ff_ownership
+
+
