@@ -1,22 +1,37 @@
+from datetime import datetime
+
+
+def value_pool(league, player_pool):
+    return 0;    
+
+
+
 def create_combined_hitter_valuations(league):
+    from datetime import date
     import sys
     sys.path.append('python/general')
     import utilities
     sys.path.append('python/munging')
     sys.path.append('python/analysis')
     import calculations
-    import create_combined
+    import player_pool_stats
 
     assert league.league_name in ['SoS', 'Legacy']
-    combined_hitters = create_combined.create_combined_hitters(league)
+    combined_hitters = player_pool_stats.create_combined_hitters(league)
     combined_hitters['type']='B'
 
-    combined_hitters['sample'] = combined_hitters.apply(lambda row: row.pa > 500, axis=1)
+    # calc % of season left for determining PAs for sample threshold
+    f_date = date(2021, 4, 1)
+    l_date = date(2021, 9, 30)
+    season_length = l_date - f_date
+    pct_through = (l_date - date.today()).days / (l_date - f_date).days
+
+    combined_hitters['sample'] = combined_hitters['pa'] > 500*pct_through
     for run in range(1,3):
         combined_hitters = calculations.calc_z(df=combined_hitters, ls=league, type='hitting')
         combined_hitters['sample'] = combined_hitters.apply(lambda row: row.zar > 0, axis=1)
 
-    combined_hitters_600 = create_combined.create_combined_hitters(league, pa=600)
+    combined_hitters_600 = player_pool_stats.create_combined_hitters(league, pa=600)
     combined_hitters_600['type']='B'
     combined_hitters_600 = combined_hitters_600.merge(combined_hitters[['fg_id', 'sample']], how='left', on='fg_id')
     combined_hitters_600 = calculations.calc_z(df=combined_hitters_600, ls=league, type='hitting')
@@ -40,10 +55,10 @@ def create_combined_pitcher_valuations(league):
     sys.path.append('python/munging')
     sys.path.append('python/analysis')
     import calculations
-    import create_combined
+    import player_pool_stats
 
     assert league.league_name in ['SoS', 'Legacy']
-    combined_pitchers = create_combined.create_combined_pitchers(league)
+    combined_pitchers = player_pool_stats.create_combined_pitchers(league)
     combined_pitchers['type']='P'
 
     if league.league_name == 'SoS':
@@ -146,20 +161,24 @@ def update_inseason_valuations(league_sos, league_legacy):
                league_sos.hitting_counting_stats,
                league_legacy.hitting_rate_stats,
                league_legacy.hitting_rate_stats,
-               'zar_sos', 'value_sos', 'value_600_sos', 'zar_legacy', 'value_legacy', 'value_600_legacy']
+               'value_sos', 'value_600_sos', 'value_legacy', 'value_600_legacy']
     columns = utilities.flatten(columns)
     combined_hitters = sos_hitters.merge(legacy_hitters[legacy_extra_columns], on='fg_id')
     combined_hitters.drop_duplicates(subset=['fg_id'], inplace=True)
 
     # Merge in the ownership
     bbdb = postgres.connect_to_bbdb()
-    sos_rosters = pd.read_sql('SELECT fg_id, sos."Team" FROM rosters.sos', con=bbdb)
+    sos_rosters = pd.read_sql('SELECT fg_id, sos."Team" as sos_team FROM rosters.sos', con=bbdb)
     sos_rosters[['fg_id']] = sos_rosters[['fg_id']].astype(str)
     combined_hitters = combined_hitters.merge(sos_rosters, how='left', on='fg_id')
 
     legacy_rosters = pd.read_sql('SELECT fg_id, legacy."Team" as legacy_team FROM rosters.legacy', con=bbdb)
     legacy_rosters[['fg_id']] = legacy_rosters[['fg_id']].astype(str)
     combined_hitters = combined_hitters.merge(legacy_rosters, how='left', on='fg_id')
+    combined_hitters.drop(
+        combined_hitters[(combined_hitters['fg_id']=='19755') & (combined_hitters['legacy_team']=='Harper Wallbanger')].index, 
+        inplace = True)
+
 
 
     # Pitchers
@@ -181,12 +200,23 @@ def update_inseason_valuations(league_sos, league_legacy):
     combined_pitchers = sos_pitchers.merge(legacy_pitchers[legacy_extra_columns], on='fg_id')
     combined_pitchers = combined_pitchers[columns]
 
+    # Merge in CFIP
     bbdb = postgres.connect_to_bbdb()
-    sos_rosters = pd.read_sql('SELECT * FROM rosters.sos', con=bbdb)
-    sos_rosters = sos_rosters[['fg_id', 'Team']].rename(columns={'Team': 'sos_team'})
-    sos_rosters[['fg_id']] = sos_rosters[['fg_id']].astype(str)
+    cfip = pd.read_sql('SELECT * FROM hist.bp_pitchers_raw', con=bbdb)
+    combined_pitchers = combined_pitchers.merge(cfip[['fg_id','DRA','cFIP']], how='left', on='fg_id')
 
+    # Merge in xxxFIP
+    bbdb = postgres.connect_to_bbdb()
+    cfip = pd.read_sql('SELECT * FROM tracking.xxxfip', con=bbdb)
+    combined_pitchers = combined_pitchers.merge(cfip[['fg_id','xxxFIP']], how='left', on='fg_id')
+
+    # Merge in the ownership
     combined_pitchers = combined_pitchers.merge(sos_rosters, how='left', on='fg_id')
+    combined_pitchers = combined_pitchers.merge(legacy_rosters, how='left', on='fg_id')
+    combined_pitchers.drop(
+        combined_pitchers[(combined_pitchers['fg_id']=='19755') & (combined_pitchers['legacy_team']=='Florun\'s Team')].index, 
+        inplace = True)
+
 
     # Update Google Sheets
     gc = gspread.service_account(filename='./bb-2021-2b810d2e3d25.json')
@@ -196,4 +226,62 @@ def update_inseason_valuations(league_sos, league_legacy):
     sh = gc.open("BB 2021 InSeason").worksheet('Proj - Pitchers')
     gsdf.set_with_dataframe(sh, combined_pitchers)
     gs.format_gsheet(sheet=sh)
+
+
+def create_pitcher_valuations(league, stats):
+    import sys
+    sys.path.append('python/general')
+    import utilities
+    sys.path.append('python/munging')
+    sys.path.append('python/analysis')
+    import calculations
+    import player_pool_stats
+
+    assert league.league_name in ['SoS', 'Legacy']
+    pitchers = stats
+    pitchers['type']='P'
+
+    pitchers['sample'] = pitchers.apply(lambda row: not(row['era']==float('inf') or row['whip']==float('inf')), axis=1)
+
+    for run in range(1,3):
+        pitchers = calculations.calc_z(df=pitchers, ls=league, type='pitching')
+        pitchers['sample'] = pitchers.apply(lambda row: row.zar > 0, axis=1)
+
+    columns = ['name','fg_id','team','type','elig','ip',
+               league.pitching_counting_stats,
+               league.pitching_rate_stats,
+               'zar','value','zar_skills','rank_sp','rank_rp']
+    columns = utilities.flatten(columns)
+    pitchers = pitchers[columns]
+    return pitchers
+
+
+def create_hitter_valuations(league, stats):
+    import sys
+    sys.path.append('python/general')
+    import utilities
+    sys.path.append('python/munging')
+    sys.path.append('python/analysis')
+    import calculations
+    import player_pool_stats
+
+    assert league.league_name in ['SoS', 'Legacy']
+    hitters = stats
+    hitters['type']='B'
+
+    pa_threshold = hitters['pa'].quantile(.9)
+    hitters['sample'] = hitters.apply(lambda row: row['pa']>pa_threshold, axis=1)
+
+    for run in range(1,3):
+        hitters = calculations.calc_z(df=hitters, ls=league, type='batting')
+        hitters['sample'] = hitters.apply(lambda row: row.zar > 0, axis=1)
+
+    columns = ['name','fg_id','team','type','elig','pa',
+               league.hitting_counting_stats,
+               league.hitting_rate_stats,
+               'zar','value']
+    columns = utilities.flatten(columns)
+    hitters = hitters[columns]
+    return hitters
+
 
