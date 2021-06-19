@@ -11,6 +11,7 @@ class league:
         import utilities
 
         self.league_name = league_type
+        self.year = 2021
 
         if (league_type=='SoS'):
             self.league_platform = 'fleaflicker'
@@ -22,7 +23,7 @@ class league:
             self.hitting_other_stats = ['ab']
             self.z_weights_nominal_hitting = {
 #                'hr':1, 'r':1, 'rbi':1, 'sb':1.1, 'obp':1.3, 'ops':1.2
-                'hr': 1, 'r': 1, 'rbi': 1, 'sb': 1, 'obp': 1, 'ops': 1.2
+                'hr': 1, 'r': 1, 'rbi': 1, 'sb': 1, 'obp': 1.1, 'ops': 1.1
             }
             self.z_weights_hitting = self.normalize_z_weights(self.z_weights_nominal_hitting)
 
@@ -31,7 +32,7 @@ class league:
             self.pitching_other_stats = ['gs', 'g']
             self.z_weights_nominal_pitching = {
 #                'qs':1.2, 'so':1, 'sv':.9, 'hld':.6, 'era':1.2, 'whip':1.2
-                'qs':1, 'so':1, 'sv':1, 'hld':1, 'era':1, 'whip':1
+                'qs':1.1, 'so':1, 'sv':1, 'hld':1, 'era':1, 'whip':1
             }
             self.z_weights_pitching = self.normalize_z_weights(self.z_weights_nominal_pitching)
 

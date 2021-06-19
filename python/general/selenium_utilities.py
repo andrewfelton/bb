@@ -1,4 +1,7 @@
 import os
+from selenium.common.exceptions import NoSuchElementException
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
 
 def start_selenium():
@@ -133,19 +136,31 @@ def start_driver_chrome():
     driver.close()
 
 
-def start_driver_local_chrome():
+def start_driver_local_chrome(headless=True):
     from selenium import webdriver
     chrome_options = webdriver.ChromeOptions()
-    #chrome_options.add_argument('--headless')
+    # options from https://stackoverflow.com/questions/48450594/selenium-timed-out-receiving-message-from-renderer
+    # AGRESSIVE: options.setPageLoadStrategy(PageLoadStrategy.NONE); #  https://www.skptricks.com/2018/08/timed-out-receiving-message-from-renderer-selenium.html
+    chrome_options.add_argument("start-maximized"); # https://stackoverflow.com/a/26283818/1689770
+    chrome_options.add_argument("enable-automation"); # https://stackoverflow.com/a/43840128/1689770
+    if headless:
+        chrome_options.add_argument("--headless"); # only if you are ACTUALLY running headless
+    chrome_options.add_argument("--no-sandbox"); # https://stackoverflow.com/a/50725918/1689770
+    chrome_options.add_argument("--disable-infobars"); # https://stackoverflow.com/a/43840128/1689770
+    chrome_options.add_argument("--disable-dev-shm-usage"); # https://stackoverflow.com/a/50725918/1689770
+    chrome_options.add_argument("--disable-browser-side-navigation"); # https://stackoverflow.com/a/49123152/1689770
+    chrome_options.add_argument("--disable-gpu"); # https://stackoverflow.com/questions/51959986/how-to-solve-selenium-chromedriver-timed-out-receiving-message-from-renderer-exc
     prefs = {"profile.default_content_settings.popups": 0,
                 "download.default_directory": r"/Users/andrewfelton/Downloads/docker/",
                 "directory_upgrade": True}
     chrome_options.add_experimental_option("prefs", prefs)
     driver = webdriver.Chrome(desired_capabilities=chrome_options.to_capabilities())
+    # driver.set_page_load_timeout(45)
     return driver
 
 
-def start_driver():
-    return start_driver_local_chrome()
+def start_driver(headless=True):
+    return start_driver_local_chrome(headless=headless)
+    #return start_driver_ff()
 
 

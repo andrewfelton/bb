@@ -78,9 +78,9 @@ def format_gsheet(sheet):
 
     hitting_rate_stats = ['avg','obp','ops','slg']
     hitting_rate_format = gsfmt.CellFormat(numberFormat=gsfmt.NumberFormat(type='NUMBER', pattern='0.000'))
-    pitching_rate_stats = ['era','whip']
+    pitching_rate_stats = ['era','whip','DRA','xxxFIP']
     pitching_rate_format = gsfmt.CellFormat(numberFormat=gsfmt.NumberFormat(type='NUMBER', pattern='0.00'))
-    counting_stats = ['hr','r','rbi','sb','pa','ab','qs','w','so','sv','hld','svhld','ip']
+    counting_stats = ['hr','r','rbi','sb','pa','ab','qs','w','so','sv','hld','svhld','ip','cFIP']
     counting_format = gsfmt.CellFormat(numberFormat=gsfmt.NumberFormat(type='NUMBER', pattern='0'))
     value_format = gsfmt.CellFormat(numberFormat=gsfmt.NumberFormat(type='NUMBER', pattern='0.0'))
     for header in headers:
@@ -100,3 +100,12 @@ def format_gsheet(sheet):
     sheet.set_basic_filter(name=None)
 
 # format_gs(sheet=bb2021.worksheet('Proj - Pitchers'))
+
+def format_gsheet_all():
+    import gspread
+
+    gc = gspread.service_account(filename='./bb-2021-2b810d2e3d25.json')
+    bb2021 = gc.open("BB 2021 InSeason")
+    format_gsheet(bb2021.worksheet('Proj - Hitters'))
+    format_gsheet(bb2021.worksheet('Proj - Pitchers'))
+
