@@ -10,25 +10,57 @@ import selenium_utilities
 sys.path.append('python/munging')
 import player_names
 import rosters
+from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import NoSuchElementException
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.by import By
 
 
-def scrape_razz(mytype, url):
-    driver = selenium_utilities.start_driver()
+def login_razz(driver):
+    # Check if already logged in
+    try:
+        user_info = driver.find_element_by_id('wp-admin-bar-user-info')
+    except NoSuchElementException:
+        # If not logged in, then log in
+        driver.get("https://razzball.com/wp-login.php?redirect_to=https%3A%2F%2Frazzball.com")
+        input_login = driver.find_element_by_id('user_login')
+        input_login.send_keys('andy.felton+razz@gmail.com')
+        input_pw = driver.find_element_by_id('user_pass')
+        input_pw.send_keys('36Pm4jKml7')
+        input_submit = driver.find_element_by_id('wp-submit')
+        input_submit.click()
 
-    # Log in
-    driver.get("https://razzball.com/wp-login.php?redirect_to=https%3A%2F%2Frazzball.com")
-    time.sleep(2)
-    input_login = driver.find_element_by_id('user_login')
-    input_login.send_keys('andy.felton+razz@gmail.com')
-    input_pw = driver.find_element_by_id('user_pass')
-    input_pw.send_keys('36Pm4jKml7')
-    input_submit = driver.find_element_by_id('wp-submit')
-    input_submit.click()
-    time.sleep(2)
+
+def scrape_razz(mytype, url, logged_in_driver=False):
+    print('Going to scrape '+mytype+' from '+url)
+
+    if not logged_in_driver:
+        driver = selenium_utilities.start_driver()
+        waiter = WebDriverWait(driver, 10)
+
+        # Get the home page
+        driver.get("https://razzball.com/")
+        #expected condition
+        waiter.until(EC.presence_of_element_located((By.ID, 'sitemenu')))
+        #JavaScript Executor to stop page load
+        driver.execute_script("window.stop();")
+
+        # Check if already logged in
+        try:
+            user_info = driver.find_element_by_id('wp-admin-bar-user-info')
+        except NoSuchElementException:
+            # If not logged in, then log in
+            driver.get("https://razzball.com/wp-login.php?redirect_to=https%3A%2F%2Frazzball.com")
+            input_login = driver.find_element_by_id('user_login')
+            input_login.send_keys('andy.felton+razz@gmail.com')
+            input_pw = driver.find_element_by_id('user_pass')
+            input_pw.send_keys('36Pm4jKml7')
+            input_submit = driver.find_element_by_id('wp-submit')
+            input_submit.click()
 
     # Go to the projections page
     driver.get(url)
-    time.sleep(5)
     print("Arrived at "+url)
 
     # Copy the csv window into BS
@@ -98,8 +130,11 @@ def scrape_razz(mytype, url):
     df_streamers = df_streamers.merge(right=names[['mlb_id', 'fg_id']], how='left', left_on='razz_id', right_on='mlb_id')
     df_streamers['fg_id'] = df_streamers.apply(lambda row: row['fg_id'] if str(row['fg_id'])!='nan' else row['razz_id'], axis=1)
 
-    ff_rosters = rosters.get_ff_ownership()
-    df_streamers = df_streamers.merge(right=ff_rosters[['Team', 'Player', 'fg_id']], how='left', on='fg_id')
+    ff_rosters = rosters.get_ff_ownership().rename(columns={"Team": "SoS_Team"})
+    legacy_rosters = rosters.get_legacy_ownership().rename(columns={"Team": "Legacy_Team"})
+    df_streamers = df_streamers.merge(
+        right=ff_rosters[['SoS_Team', 'fg_id']], how='left', on='fg_id').merge(
+            right=legacy_rosters[['Legacy_Team', 'fg_id']], how='left', on='fg_id')
 
     # Save on computer as .csv file
     mysystem = 'razz'
@@ -115,11 +150,16 @@ def scrape_razz(mytype, url):
 
     # Close it down
     driver.close()
-    time.sleep(1)
     #selenium_utilities.stop_selenium('bbsel')
 
     return df_streamers
 
+
+
+# for testing
+if (1==2):
+    mytype='pitchers'
+    url="https://razzball.com/steamer-pitcher-projections/"
 
 
 #scrape_razz(mytype='pitchers', url="https://razzball.com/steamer-pitcher-projections/")
