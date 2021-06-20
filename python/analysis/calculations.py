@@ -53,7 +53,7 @@ def calc_z(df, ls, type):
     if (type=='batting' or type=='hitting'):
         if not('elig' in df.columns):
             eligibilities = elig.get_eligibilities('SoS')
-            df = df.merge(eligibilities[['fg_id','elig']], on='fg_id', how='left')
+            df = df.merge(eligibilities[['fg_id','elig']][eligibilities['fg_id'].isna()==False], on='fg_id', how='left')
         df['catcher'] = df.apply(lambda row: 'C' in str(row['elig']).split(' '), axis=1)
         catchers = df[df['catcher']]
         catchers['rank'] = catchers['zar'].rank(ascending=False)
