@@ -175,12 +175,15 @@ def create_combined_pitchers(ls):
     return combined_pitchers
 
 
-def create_actuals_hitters(year=2021):
+def create_actuals_hitters(ls, year=2021):
     import sys
     sys.path.append('python/general')
     import utilities
     import postgres
     import classes
+    sys.path.append('python/general')
+    import player_names
+    import pandas as pd
 
     bbdb = postgres.connect_to_bbdb()
     query = (
@@ -200,9 +203,9 @@ def create_actuals_hitters(year=2021):
     # merge in the names and reorder
     names = player_names.get_player_names()
     combined_hitters = df.merge(names[['bbref_id', 'fg_id', 'name']], on='bbref_id', how='left')
-    output_stats = utilities.flatten([['fg_id', 'name', 'team', 'pa'],[ls.hitting_stats]])
+    output_stats = utilities.flatten([['fg_id', 'bbref_id', 'name', 'team', 'pa'],[ls.hitting_stats]])
     combined_hitters = combined_hitters[output_stats]
-
+    combined_hitters.drop_duplicates(inplace=True)
     return combined_hitters
 
 def create_actuals_pitchers(year=2021):
@@ -238,6 +241,7 @@ def create_actuals_pitchers(year=2021):
     combined_pitchers = df.merge(names[['bbref_id', 'fg_id', 'name']], on='bbref_id', how='left')
     output_stats = utilities.flatten([['fg_id', 'name', 'team', 'ip'],[ls.pitching_stats]])
     combined_pitchers = combined_pitchers[output_stats]
+    combined_pitchers.drop_duplicates(inplace=True)
 
     return combined_pitchers
 
