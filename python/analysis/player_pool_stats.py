@@ -24,7 +24,6 @@ def create_combined_hitters(ls, pa=0):
             ') AS proj'
     )
     df = pd.read_sql_query(query, bbdb)
-    df.loc[df['fg_id'] == 'sa3011918', 'fg_id'] = '27506'
 
     query_pa = (
             'SELECT proj.* FROM (' +
@@ -104,26 +103,26 @@ def create_combined_pitchers(ls):
     import player_names
 
     bbdb = postgres.connect_to_bbdb()
+
     query = (
-            'SELECT proj.* FROM (' +
-            'SELECT \'fg_dc\' as source, fg_id, ip, qs, era, whip, so, sv, hld, svhld  ' +
-            'FROM proj.fg_dc_pitchers ' +
-            'UNION ' +
-            'SELECT \'pod\'   as source, fg_id, ip, qs, era, whip, so, sv, hld, svhld  ' +
-            'FROM proj.pod_pitchers ' +
-            ') AS proj'
+            'SELECT \'razz\' as source, fg_id, ip, qs, era, whip, k as so, sv, hld ' +
+            'FROM proj.razz_pitchers_ros '
     )
-    df = pd.read_sql_query(query, bbdb)
+    df_razz = pd.read_sql_query(query, bbdb)
+    df_razz['svhld'] = (df_razz['sv'] + df_razz['hld'])
 
-    query_ip = (
-            'SELECT proj.* FROM (' +
-            'SELECT \'fg_dc\' as source, fg_id, ip FROM proj.fg_dc_pitchers ' +
- #           'UNION ' +
- #           'SELECT \'pod\' as source, fg_id, ip FROM proj.pod_pitchers ' +
-            ') AS proj'
+
+    query = (
+            'SELECT \'fg_dc\' as source, fg_id, ip, qs, era, whip, so, sv, hld ' +
+            'FROM proj.fg_dc_pitchers '
     )
-    df_ip = pd.read_sql_query(query_ip, bbdb)
+    df_fg_dc = pd.read_sql_query(query, bbdb)
+    df_fg_dc['qs'] = df_fg_dc['qs'].replace({0: None})
+    df_fg_dc['svhld'] = (df_razz['sv'] + df_razz['hld'])
+    df = pd.concat([df_razz, df_fg_dc])
 
+    df_ip = df[['source', 'fg_id', 'ip']]    
+    
     query_teams = 'SELECT playerid as fg_id, fg_dc_pitchers_raw."Team" as team FROM proj.fg_dc_pitchers_raw'
     df_teams = pd.read_sql_query(query_teams, bbdb)
 
@@ -134,13 +133,13 @@ def create_combined_pitchers(ls):
 
 
 
-    weights = {'system': ['fg_dc', 'thebat', 'thebatx', 'pod'],
-               'sys_weight': [1, 1, 1.2, .5]}
+    weights = {'system': ['fg_dc', 'thebat', 'thebatx', 'pod', 'razz'],
+               'sys_weight': [1, 1, 1.2, .1, 1]}
     weights = pd.DataFrame(weights)
     df = df.merge(right=weights, how='left', left_on='source', right_on='system')
 
-    weights_ip = {'system': ['fg_dc', 'thebat', 'thebatx', 'pod'],
-               'sys_weight': [1, 0, 0, 0]}
+    weights_ip = {'system': ['fg_dc', 'thebat', 'thebatx', 'pod', 'razz'],
+               'sys_weight': [.25, 0, 0, 0, 1]}
     weights_ip = pd.DataFrame(weights_ip)
     df_ip = df_ip.merge(right=weights_ip, how='left', left_on='source', right_on='system')
 
@@ -154,6 +153,7 @@ def create_combined_pitchers(ls):
         return result
 
 
+    df.loc[df['source'] == 'fg_dc', 'qs'] = None
 
     combined_pitchers = pd.DataFrame(df_ip['fg_id'].unique(), columns=['fg_id'])
     statlist = list(set(utilities.flatten([['ip'], ls.pitching_stats])))

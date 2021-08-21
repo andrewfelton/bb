@@ -1,11 +1,9 @@
 def scrape_pod():
     import pandas as pd
-    sys.path.append('python/general')
-    sys.path.append('python/munging')
-    import postgres
-    import player_names
-    bbdb = postgres.connect_to_bbdb()
+    from general import postgres
+    from munging import player_names
 
+    bbdb = postgres.connect_to_bbdb()
     names = player_names.get_player_names()
 
     # -------------------------------

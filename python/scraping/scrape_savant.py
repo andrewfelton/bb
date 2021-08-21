@@ -1,17 +1,11 @@
-import os
-import sys
-import pandas as pd
-import time
-import datetime
-from datetime import date
-sys.path.append('/Users/andrewfelton/Documents/bb/2021/python')
-import selenium_utilities
-import postgres
-sys.path.append('python/munging')
-import player_names
-
-
 def scrape_savant():
+
+    from datetime import date
+    import os
+    import pandas as pd
+    from general import selenium_utilities
+    from general import postgres
+    from munging import player_names
 
     driver = selenium_utilities.start_driver()
     draft_url = "https://baseballsavant.mlb.com/leaderboard/custom?year=2021&type=batter&filter=&sort=4&sortDir=desc&min=10&selections=b_total_pa,xba,xslg,woba,xwoba,xobp,xiso,wobacon,xwobacon,exit_velocity_avg,launch_angle_avg,barrel_batted_rate,hard_hit_percent,sprint_speed,&chart=false&x=xba&y=xba&r=no&chartType=beeswarm"

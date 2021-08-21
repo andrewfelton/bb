@@ -7,7 +7,7 @@ def get_eligibilities(league):
     bbdb = postgres.connect_to_bbdb()
     query = (
             'SELECT fg_id, elig '
-            'FROM reference.player_names_ff '
+            'FROM reference.player_pool_ff '
     )
     df = pd.read_sql_query(query, bbdb)
     return df

@@ -1,22 +1,3 @@
-import os
-from datetime import date
-from datetime import datetime
-import time
-from bs4 import BeautifulSoup
-import pandas as pd
-import sys
-sys.path.append('python/general')
-import selenium_utilities
-sys.path.append('python/munging')
-import player_names
-import rosters
-from selenium.common.exceptions import NoSuchElementException
-from selenium.common.exceptions import NoSuchElementException
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.common.by import By
-
-
 def login_razz(driver):
     # Check if already logged in
     try:
@@ -32,7 +13,21 @@ def login_razz(driver):
         input_submit.click()
 
 
-def scrape_razz(mytype, url, logged_in_driver=False):
+def scrape_razz(mytype, url, logged_in_driver=False, merge_ownership=True):
+    from bs4 import BeautifulSoup
+    import pandas as pd
+    from datetime import datetime
+    from datetime import date
+    import os
+    from selenium.common.exceptions import NoSuchElementException
+    from selenium.webdriver.support.ui import WebDriverWait
+    from selenium.webdriver.support import expected_conditions as EC
+    from selenium.webdriver.common.by import By
+    from general import selenium_utilities
+    from general import postgres
+    from munging import player_names
+    from munging import rosters
+
     print('Going to scrape '+mytype+' from '+url)
 
     if not logged_in_driver:
@@ -66,6 +61,8 @@ def scrape_razz(mytype, url, logged_in_driver=False):
     # Copy the csv window into BS
     soup = BeautifulSoup(driver.page_source, 'lxml')
     table = soup.find('table', id='neorazzstatstable')
+    # Close it down
+    driver.close()
 
     streamers = []
 
@@ -79,6 +76,7 @@ def scrape_razz(mytype, url, logged_in_driver=False):
     # Insert Razz ID before Name
     colnames.insert(colnames.index('name'), 'razz_id')
 
+    # Loop through all the rows and append them to the list
     trows = table.findAll('tr')
     for trow in trows:
         streamer = []
@@ -95,7 +93,7 @@ def scrape_razz(mytype, url, logged_in_driver=False):
                     streamer.append(player_id)  # Razz ID
                     player_name = td.find('a').text
                     streamer.append(player_name)  # player name
-                elif (loc+1)==colnames.index('date'):
+                elif ('date' in colnames) and (loc+1)==colnames.index('date'):
                     date_str =td.text + '/2021'
                     streamdate = datetime.strptime(date_str, '%m/%d/%Y')
                     streamer.append(streamdate) # Date
@@ -130,11 +128,12 @@ def scrape_razz(mytype, url, logged_in_driver=False):
     df_streamers = df_streamers.merge(right=names[['mlb_id', 'fg_id']], how='left', left_on='razz_id', right_on='mlb_id')
     df_streamers['fg_id'] = df_streamers.apply(lambda row: row['fg_id'] if str(row['fg_id'])!='nan' else row['razz_id'], axis=1)
 
-    ff_rosters = rosters.get_ff_ownership().rename(columns={"Team": "SoS_Team"})
-    legacy_rosters = rosters.get_legacy_ownership().rename(columns={"Team": "Legacy_Team"})
-    df_streamers = df_streamers.merge(
-        right=ff_rosters[['SoS_Team', 'fg_id']], how='left', on='fg_id').merge(
-            right=legacy_rosters[['Legacy_Team', 'fg_id']], how='left', on='fg_id')
+    if merge_ownership:
+        ff_rosters = rosters.get_ff_ownership().rename(columns={"Team": "SoS_Team"})
+        legacy_rosters = rosters.get_legacy_ownership().rename(columns={"Team": "Legacy_Team"})
+        df_streamers = df_streamers.merge(
+            right=ff_rosters[['SoS_Team', 'fg_id']], how='left', on='fg_id').merge(
+                right=legacy_rosters[['Legacy_Team', 'fg_id']], how='left', on='fg_id')
 
     # Save on computer as .csv file
     mysystem = 'razz'
@@ -148,9 +147,20 @@ def scrape_razz(mytype, url, logged_in_driver=False):
     command_ln = os.popen('ln -sf ' + new_file + ' ' + ln_file)
     print(command_ln)
 
-    # Close it down
-    driver.close()
-    #selenium_utilities.stop_selenium('bbsel')
+    # Upload to the database
+    tablename = mytype
+    bbdb = postgres.connect_to_bbdb()
+
+    query_tables = "SELECT * FROM pg_catalog.pg_tables WHERE schemaname='proj';"
+    tables_list_result = bbdb.execute(query_tables)
+    tables_list = []
+    for table in tables_list_result:
+        tables_list.append(table[1])
+
+    if (tablename in tables_list):
+        command = 'TRUNCATE TABLE proj."'+tablename+'"'
+        bbdb.execute(command)
+    df_streamers.to_sql(tablename, bbdb, schema='proj', if_exists='append', index=False)
 
     return df_streamers
 
@@ -170,4 +180,5 @@ if (1==2):
 #scrape_razz(mytype='hittertron-today', url="https://razzball.com/hittertron-today/")
 #scrape_razz(mytype='hittertron-tomorrow', url="https://razzball.com/hittertron-tomorrow/")
 
+#razz_ros_pitchers = scrape_razz(mytype='razz_ros_pitchers', url="https://razzball.com/restofseason-pitcherprojections/")
 

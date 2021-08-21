@@ -1,8 +1,5 @@
 def login():
-    import sys
     import time
-    sys.path.append('/python')
-    import selenium_utilities
 
     driver = selenium_utilities.start_driver()
     driver.get("https://www.fleaflicker.com/mlb/login")
@@ -23,16 +20,15 @@ def login():
 def rosters(league, upload_to_db=True):
     import sys
     import datetime
+    import requests
     from bs4 import BeautifulSoup
     import pandas as pd
-    sys.path.append('python/general')
-    import postgres
-    import classes
-    sys.path.append('python/munging')
-    import rosters
-    import player_names
-    import requests
+    from general import classes
+    from munging import player_names
+    from general import postgres
 
+
+    print('\n--------------------------\nScraping Fleaflicker rosters for league:'+league.league_name+'\n')
     assert(league.league_platform == 'fleaflicker')
     league_num = league.league_num
 
@@ -58,6 +54,7 @@ def rosters(league, upload_to_db=True):
             elif tr.find('a', {"class": "player-text"}):
                 player_data = tr.find('a', {"class": "player-text"})
                 player_name = player_data.text
+                player_url = 'https://www.fleaflicker.com' + player_data['href']
                 player_ff_id = player_data['href'].split('/')[-1].split('-')[-1]
                 current_team.add_player(player_name, player_ff_id)
 
@@ -73,7 +70,10 @@ def rosters(league, upload_to_db=True):
     if len(missing_fg_id)>0:
         print('Miising fg_id for '+str(len(missing_fg_id.values))+' player(s):')
         for player in missing_fg_id.values.tolist():
+            print('\nMissing info on:')
             print(player)
+            ff_match = player_names.find_other_ids_w_ff(player[2])
+
 
     file_rosters = '/Users/andrewfelton/Documents/bb/bb-2021/data/rosters/rosters_'+league_num+'_'+str_today+'.csv'
     df_export.to_csv(file_rosters, index=False)
@@ -84,20 +84,16 @@ def rosters(league, upload_to_db=True):
         df_export.to_sql('sos', con=bbdb, schema='rosters', if_exists='replace', index=False)
         print('Uploaded to database')
 
+        player_names.push_player_names_to_gs()
+        print('Updated Google Sheets')
+
     return df_export
 
 
 def team_rosters():
-    import sys
     import datetime
     from bs4 import BeautifulSoup
     import pandas as pd
-    sys.path.append('python/general')
-    import postgres
-    sys.path.append('python/munging')
-    import rosters
-    import player_names
-    import requests
 
     assert(league.league_platform == 'fleaflicker')
     league_num = league.league_num
@@ -120,14 +116,11 @@ def team_rosters():
 
 
 def scrape_standings(league):
-    import sys
     import requests
-    import pandas as pd
     from bs4 import BeautifulSoup
+    import pandas as pd
     import datetime
-    sys.path.append('python/general')
-    import postgres
-
+    from general import postgres
 
     assert(league.league_platform == 'fleaflicker')
     league_num = league.league_num
@@ -157,3 +150,97 @@ def scrape_standings(league):
 
 
 # scrape_standings(league=league_sos)
+
+
+def scrape_ff_player_pool():
+    # This loops through the FF player pages and saves the player name, id, and eligibility to the database
+    from bs4 import BeautifulSoup
+    import pandas as pd
+    import requests
+    import time
+    import unidecode
+
+    import sys
+    sys.path.append('python/munging')
+    import player_names
+    sys.path.append('python/general')
+    import postgres
+
+
+    # EXTRACT
+    pitcher_base_url = 'https://www.fleaflicker.com/mlb/leagues/23172/players?season=2021&statType=1&sortMode=1&position=1536&isFreeAgent=false&tableSortDirection=DESC&tableSortName=pv7&tableOffset='
+    hitter_base_url  = 'https://www.fleaflicker.com/mlb/leagues/23172/players?season=2021&statType=1&sortMode=1&position=511&isFreeAgent=false&tableSortDirection=DESC&tableSortName=pv7&tableOffset='
+
+    players = []
+    for baseurl in [hitter_base_url, pitcher_base_url]:
+        for i in range(0, 601, 20):
+            url = baseurl + str(i)
+            page = requests.get(url)
+            print('Got '+url)
+            time.sleep(1)
+            soup = BeautifulSoup(page.text, 'html.parser')
+            table = soup.find('div', {'id':'body-center-main'}).find('table')
+
+            count = 0
+            trow = table.find('thead').next_sibling
+            while trow is not None and count<20:
+                player_data = trow.find('div', {'class':'player'})
+                player_name = unidecode.unidecode(player_data.find('a', {'class':'player-text'}).text)
+                player_id = player_data.find('a', {'class':'player-text'})['href'].split('/')[-1].split('-')[-1]
+                player_url = 'https://www.fleaflicker.com' + player_data.find('a')['href']
+                player_elig = player_data.find('span', {'class':'position'}).text
+                player_team = player_data.find('span', {'class':'player-team'}).text
+                #print('  '.join([player_name, player_id, elig]))
+                players.append([player_id, player_name, player_url, player_team, player_elig])
+                trow = trow.next_sibling
+                count = count+1
+
+    df_players = pd.DataFrame(players, columns=['ff_id', 'ff_name', 'ff_url', 'ff_team', 'ff_elig'])
+
+    # TRANSFORM
+    def combine_eligibilities(row):
+        ff_elig_list = row['ff_elig'].split('/')
+        #print(row['ff_name'])
+        #print(row['ff_elig'])
+        #print(ff_elig_list)
+        eligibilities = []
+
+        # Infielders
+        for pos in ['C', '1B', '2B', 'SS', '3B']:
+            if pos in ff_elig_list:
+                eligibilities.append(pos)
+        if '2B' in eligibilities or 'SS' in eligibilities:
+            eligibilities.append('MI')
+        if '1B' in eligibilities or '3B' in eligibilities:
+            eligibilities.append('CI')
+        if 'MI' in eligibilities or 'CI' in eligibilities:
+            eligibilities.append('IF')
+
+        # Outfielders
+        for pos in ['OF', 'RF', 'LF', 'CF']:
+            if pos in ff_elig_list and 'OF' not in eligibilities:
+                eligibilities.append('OF')
+
+        # Pitchers - just use the same as FF
+        if 'SP' in eligibilities or 'RP' in eligibilities or 'P' in eligibilities:
+            eligibilities = ff_elig_list
+
+        #print(eligibilities)
+        # Concatenate into a string and return
+        elig = ' '.join(eligibilities).strip()
+        #print(elig)
+        if elig == '':
+            elig = 'UT'
+        return elig
+
+    df_players['elig'] = df_players.apply(lambda row: combine_eligibilities(row), axis=1)
+
+    names = player_names.get_player_names()
+    df_players = df_players.merge(right=names[['ff_id', 'fg_id']], how='left', on='ff_id')
+
+    # LOAD    
+    bbdb = postgres.connect_to_bbdb()
+    df_players.to_sql('player_pool_ff', con=bbdb, schema='reference', if_exists='replace', chunksize=1000, method='multi', index=False)
+    print('Uploaded FleaFlicker player pool')
+
+    return df_players

@@ -72,5 +72,5 @@ def scrape_bp_pitching():
     if (tablename in tables_list):
         command = 'TRUNCATE TABLE hist.'+tablename
         bbdb.execute(command)
-    bp_pitchers[['fg_id', 'bp_id', 'IP', 'DRA', 'cFIP']]\
+    bp_pitchers[['fg_id', 'bp_id', 'IP', 'DRAminus', 'cFIP']]\
         .to_sql(tablename, bbdb, schema='hist', if_exists='append', index=False)

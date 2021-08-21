@@ -207,7 +207,7 @@ def update_inseason_valuations(league_sos, league_legacy):
 
     # Merge in xxxFIP
     bbdb = postgres.connect_to_bbdb()
-    cfip = pd.read_sql('SELECT * FROM tracking.xxxfip', con=bbdb)
+    cfip = pd.read_sql('SELECT * FROM tracking.xxxfip WHERE fg_id IS NOT NULL', con=bbdb)
     combined_pitchers = combined_pitchers.merge(cfip[['fg_id','xxxFIP']], how='left', on='fg_id')
 
     # Merge in the ownership

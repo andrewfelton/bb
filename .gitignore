@@ -2,3 +2,5 @@
 *.pyc
 .DS_Store
 bb-2021-2b810d2e3d25.json
+.vscode/launch.json
+.vscode/settings.json

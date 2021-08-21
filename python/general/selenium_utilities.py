@@ -1,8 +1,3 @@
-import os
-from selenium.common.exceptions import NoSuchElementException
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-
 
 def start_selenium():
     commands = [
@@ -62,14 +57,13 @@ def create_selenium_container_ff():
     return docker_ff_id
 
 def stop_selenium(docker_id):
+    import os
     os.system('docker stop ' + docker_id)
     #os.system('docker rm ' + docker_id)
 
 
 def start_driver_ff():
-    import sys
-    sys.path.append('/python')
-    import selenium_utilities
+    from general import selenium_utilities
     from selenium import webdriver
     import time
 
@@ -101,12 +95,10 @@ def start_driver_ff():
 
 
 def start_driver_chrome():
-    import sys
-    sys.path.append('/python')
-    import selenium_utilities
+    from datetime import time
+    from general import selenium_utilities
     from selenium import webdriver
     from selenium.webdriver.chrome.options import Options
-    import time
 
     # start a selenium container
     docker_ff_id = selenium_utilities.start_selenium()

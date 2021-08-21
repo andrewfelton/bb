@@ -1,4 +1,16 @@
+from datetime import date
+from datetime import datetime
+import time
+
+import pandas as pd
+import requests
+from bs4 import BeautifulSoup
+import gspread
+import gspread_dataframe as gsdf
+
+import os
 import sys
+
 from scraping import scrape_fg_projections
 from scraping import scrape_ff
 from scraping import scrape_razzball
@@ -7,14 +19,23 @@ from scraping import scrape_yahoo
 from scraping import scrape_savant
 from scraping import scrape_xxxfip
 from scraping import scrape_bbref
+
 from munging import update_spreadsheets
+from munging import player_names
+from munging import rosters
+
 from analysis import valuations
+
 from general import classes
 from general import utilities
-import pandas as pd
+from general import selenium_utilities
+from general import postgres
 
-pd.set_option('display.max_columns', None)
-pd.set_option('display.precision', 2)
+
+
+
+#pd.set_option('display.max_columns', None)
+#pd.set_option('display.precision', 2)
 
 print('Running '+sys.argv[0])
 league_sos = classes.league('SoS')
@@ -40,8 +61,11 @@ if '-savant' in sys.argv or '-all' in sys.argv:
 
 if '-xxxfip' in sys.argv or '-all' in sys.argv:
     print('Scraping xxxFIP metrics...')
-    scrape_xxxfip.scrape_xxxfip()
-    print('Finished scraping xxxFIP')
+    try:
+        scrape_xxxfip.scrape_xxxfip()
+        print('Finished scraping xxxFIP')
+    except IndexError:
+        print('There was an error updating the xxxFIP data')
 
 if '-bbref' in sys.argv or '-all' in sys.argv:
     print('Scraping Baseball Reference actual data...')
@@ -49,12 +73,19 @@ if '-bbref' in sys.argv or '-all' in sys.argv:
     print('Finished scraping actuals')
     
 
+if '-razz' in sys.argv or '-all' in sys.argv:
+    print('Scraping Razzball projections...')
+    #scrape_razzball.scrape_razz(mytype='pitchers', url="https://razzball.com/steamer-pitcher-projections/")
+    #scrape_razzball.scrape_razz(mytype='batters', url="https://razzball.com/steamer-hitter-projections/")
+    print('Finished Razzball projections')
+
 # Update combined projections
 
 
 # Update eligibilities
-
-
+if '-elig' in sys.argv:
+    scrape_ff.scrape_ff_player_pool()
+    scrape_yahoo.scrape_yahoo_player_pool()
 # Update valuations
 
 
@@ -93,7 +124,7 @@ if '-razz' in sys.argv or '-all' in sys.argv:
     print('Good upcoming streamers for SoS:')
     print(
         razz_streamers[
-            (razz_streamers['SoS_Team'].isna()) & (razz_streamers['era']<4.0)
+            (razz_streamers['SoS_Team'].isna()) & (razz_streamers['era']<4.25)
         ].
         append(
             razz_streamers[(razz_streamers['SoS_Team']=='JohnnyFang\'s Team')]
