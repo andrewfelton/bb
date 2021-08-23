@@ -1,11 +1,8 @@
 def create_combined_hitters(ls, pa=0):
-    import sys
-    sys.path.append('python/general')
-    import utilities
-    sys.path.append('python/munging')
-    import postgres
     import pandas as pd
-    import player_names
+    from general import utilities
+    from general import postgres
+    from munging import player_names
 
     bbdb = postgres.connect_to_bbdb()
     query = (
@@ -176,20 +173,23 @@ def create_combined_pitchers(ls):
 
 
 def create_actuals_hitters(ls, year=2021):
-    import sys
-    sys.path.append('python/general')
-    import utilities
-    import postgres
-    import classes
-    sys.path.append('python/general')
-    import player_names
     import pandas as pd
+    from general import utilities
+    from general import postgres
+    from general import classes
+    from munging import player_names
 
     bbdb = postgres.connect_to_bbdb()
+
+    if year==2021:
+        tablename = 'tracking'
+    else:
+        tablename = 'reference'
+
     query = (
         'SELECT year, bbref_id, bat."Tm" as team, bat."PA" as pa, '+
         'bat."HR" as hr, bat."R" as r, bat."RBI" as rbi, bat."SB" as sb, bat."OBP" as obp, bat."OPS" as ops '+
-        'FROM reference.bbref_batting_standard bat WHERE year='+str(year))
+        'FROM '+tablename+'.bbref_batting_standard bat WHERE year='+str(year))
     df = pd.read_sql_query(query, bbdb)
     df = df.fillna(value={'obp':0, 'ops': 0, 'pa':0, 'r':0, 'rbi':0, 'sb':0})
     for c in ['pa', 'r', 'rbi', 'hr', 'sb']:

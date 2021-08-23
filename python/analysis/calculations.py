@@ -1,10 +1,8 @@
 def calc_z(df, ls, type):
-    import sys
-    sys.path.append('python/general')
-    import utilities
-    sys.path.append('python/analysis')
-    import elig
     import json
+    import sys
+    from general import utilities
+    from analysis import elig
 
     assert type in ['hitting', 'batting', 'pitching']
     if (type=='batting' or type=='hitting'):
@@ -55,7 +53,7 @@ def calc_z(df, ls, type):
             eligibilities = elig.get_eligibilities('SoS')
             df = df.merge(eligibilities[['fg_id','elig']][eligibilities['fg_id'].isna()==False], on='fg_id', how='left')
         df['catcher'] = df.apply(lambda row: 'C' in str(row['elig']).split(' '), axis=1)
-        catchers = df[df['catcher']]
+        catchers = df[df['catcher']].copy()
         catchers['rank'] = catchers['zar'].rank(ascending=False)
         catcher_repl = catchers.iloc[16]['zar']
         def add_catcher_repl(row):

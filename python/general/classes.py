@@ -8,7 +8,7 @@ class league:
     def __init__(self, league_type):
         import sys
         sys.path.append('python/general')
-        import utilities
+        from general import utilities
 
         self.league_name = league_type
         self.name = self.league_name

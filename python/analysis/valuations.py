@@ -1,20 +1,44 @@
 from datetime import datetime
 
+from six import text_type
 
-def value_pool(league, player_pool):
-    return 0;    
+
+def value_pool_hitting(league, player_pool, type):
+    from datetime import date
+    from general import utilities
+    from analysis import calculations
+    from analysis import player_pool_stats
+
+    assert type in ['B', 'P']
+    player_pool['type']=type
+
+    # calc % of season left for determining PAs for sample threshold
+    f_date = date(2021, 4, 1)
+    l_date = date(2021, 9, 30)
+    season_length = l_date - f_date
+    pct_through = (l_date - date.today()).days / (l_date - f_date).days
+
+    player_pool['sample'] = player_pool['pa'] > 500*pct_through
+    for run in range(1,3):
+        player_pool = calculations.calc_z(df=player_pool, ls=league, type='hitting')
+        player_pool['sample'] = player_pool.apply(lambda row: row.zar > 0, axis=1)
+
+    columns = ['name','fg_id','type','elig','pa',
+               league.hitting_counting_stats,
+               league.hitting_rate_stats,
+               'zar','value']
+    columns = utilities.flatten(columns)
+    player_pool = player_pool[columns]
+    return player_pool
+
 
 
 
 def create_combined_hitter_valuations(league):
     from datetime import date
-    import sys
-    sys.path.append('python/general')
-    import utilities
-    sys.path.append('python/munging')
-    sys.path.append('python/analysis')
-    import calculations
-    import player_pool_stats
+    from general import utilities
+    from analysis import calculations
+    from analysis import player_pool_stats
 
     assert league.league_name in ['SoS', 'Legacy']
     combined_hitters = player_pool_stats.create_combined_hitters(league)

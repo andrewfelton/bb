@@ -1,7 +1,7 @@
 def get_eligibilities(league):
     import sys
     sys.path.append('python/general')
-    import postgres
+    from general import postgres
     import pandas as pd
 
     bbdb = postgres.connect_to_bbdb()

@@ -1,8 +1,7 @@
 def get_player_names():
-    import sys
-    sys.path.append('python/general')
-    import postgres
     import pandas as pd
+    from general import postgres
+    
     bbdb = postgres.connect_to_bbdb()
     names = pd.read_sql_query(sql='SELECT * FROM REFERENCE.PLAYER_NAMES', con=bbdb)
     for col in ['otto_id', 'yahoo_id', 'bp_id', 'espn_id', 'ff_id', 'fg_id']:
@@ -41,12 +40,11 @@ def put_missing_in_GS(id_list, type):
         print('No missing ids')
 
 def push_player_names_to_gs():
-    import sys
-    sys.path.append('python/general')
-    import postgres
     import pandas as pd
     import gspread
     import gspread_dataframe as gsdf
+
+    from general import postgres
 
     bbdb = postgres.connect_to_bbdb()
     player_names = pd.read_sql('SELECT * FROM reference.player_names ORDER BY name', con=bbdb)
@@ -57,12 +55,11 @@ def push_player_names_to_gs():
     sh.set_basic_filter()
 
 def pull_player_names_from_gs():
-    import sys
-    sys.path.append('python/general')
-    import postgres
     import pandas as pd
     import gspread
     import gspread_dataframe as gsdf
+
+    from general import postgres
 
     bbdb = postgres.connect_to_bbdb()
     gc = gspread.service_account(filename='./bb-2021-2b810d2e3d25.json')
