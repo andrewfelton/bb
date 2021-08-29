@@ -47,10 +47,13 @@ def update_relievers_last14():
             r."xFIP", r."SIERA", r."xERA", r."CSW_pct", r."K_pct", 
             r."BB_pct", r."SwStr_pct", r."vFA", r."BABIP", r."LOB_pct", 
             r."HR_FB", r.asof_date, r.fg_id,
-            rosters_sos."Team" as sos_team
+            rosters_sos."Team" as sos_team,
+            rosters_legacy."Team" as legacy_team
         FROM tracking.relievers_last14_raw r
         LEFT JOIN reference.player_pool_ff ff_elig ON r.fg_id=ff_elig.fg_id
         LEFT JOIN rosters.sos rosters_sos ON r.fg_id=rosters_sos.fg_id
+        LEFT JOIN rosters.legacy rosters_legacy ON r.fg_id=rosters_legacy.fg_id
+        WHERE ff_elig IN ('P', 'RP', 'SP') OR ff_elig IS NULL
         ORDER BY r."WPA" DESC
         ''', con=bbdb)
     gc = gspread.service_account(filename='./bb-2021-2b810d2e3d25.json')
