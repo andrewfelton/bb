@@ -3,6 +3,7 @@ from scraping import scrape_fg_projections
 from scraping import scrape_ff
 from scraping import scrape_razzball
 from scraping import scrape_prospectus
+from scraping import scrape_mlb
 from scraping import scrape_yahoo
 from scraping import scrape_savant
 from scraping import scrape_xxxfip
@@ -29,3 +30,8 @@ if '-ff' in sys.argv or '-fleaflicker' in sys.argv or len(sys.argv)==0:
     print('\nScraping Fleaflicker player pool...')
     scrape_ff.scrape_ff_player_pool()
     print('Finished scraping Fleaflicker player pool\n')
+
+if '-mlb' in sys.argv or len(sys.argv)==0:
+    print('\nScraping MLB player pool...')
+    scrape_mlb.scrape_mlb_player_pool()
+    print('Finished scraping MLB player pool\n')
