@@ -169,53 +169,46 @@ def get_yahoo_info(yahoo_id):
 # Takes a Fleaflicker ID and tries to match.  If it finds a match, asks user
 # if you want to update player_names
 def find_other_ids_w_ff(ff_id):
-    #ff_id = 8841
-    import sys
-    sys.path.append('python/general')
-    import postgres
-    sys.path.append('python/munging')
-    import player_names
     import pandas as pd
+    from general import postgres
+    from munging import player_names
+    from scraping import scrape_fg_projections
+    from scraping import scrape_ff
 
     bbdb = postgres.connect_to_bbdb()
+
+    # First, check to see if the FleaFlicker ID is even in the FF player pool
+    # If not, rerun the player pool generator
     ff_sql = 'SELECT ff_id, ff_name, ff_team, ff_elig, fg_id FROM REFERENCE.player_pool_ff WHERE ff_id=\''+str(ff_id)+'\''
     ff_info = pd.read_sql_query(ff_sql, con=bbdb)
-    #print('Find matches for this player:')
-    #print(ff_info)
-    
     if len(ff_info)==0:
-        print('This ff_id is not in the FF player pool.  Please rerun the player pool generator')
+        print('This ff_id is not in the FF player pool.  Please rerun the player pool generator update_player_pools.py')
         return False
-    else:
-        ff_name = ff_info['ff_name'].to_list()[0]
-        print('Here is the FF player pool info available on '+ff_name+':')
-        print(ff_info)
 
-    names = player_names.get_player_names()
+    ff_name = ff_info['ff_name'].to_list()[0]
+    print(ff_name + ' is in the Fleaflicker player pool.  Here is the info available:')
+    ff_player_info = scrape_ff.get_ff_player_info(ff_id)
+    print(ff_player_info)
 
-    # If it's already in the list of player names:
-    if ff_name in names['name'].to_list():
-        matches = names[names['name']==ff_name]
-        if len(matches)==1:
-            print('Found a match!')
-            print('FG info:')
-            fg_id = matches['fg_id'].to_list()[0]
-            fg_info = get_fg_info(fg_id)
-            print(fg_info)
-            perform_merge = input('Do you want to merge in the FleaFlicker ID into the existing match?')
-            if perform_merge:
-                sql_update = 'UPDATE reference.player_names SET ff_id = \''+\
-                    str(ff_id)+\
-                    '\' WHERE fg_id=\''+\
-                    str(fg_id)+'\''
-                print(sql_update)
-                bbdb.execute(sql_update)
-                player_names.push_player_names_to_gs()
-            else:
-                print('OK, won\'t update')
-        elif len(matches)>1:
-            print('There is more than one match.  Please manually update.  List of matches:')
-            print(matches)
+    # Second, if it's in the FF player pool, get the best FG match for it based on name
+    best_fg_match = player_names.get_fg_id_from_ff_id(ff_id)
+    print('Here is the best match in the existing FanGraphs player pool')
+    fg_id_tentative = best_fg_match['fg_id']
+    best_fg_match = scrape_fg_projections.get_fg_player_info(fg_id_tentative)
+    best_fg_match
+
+    if ff_player_info['team']==best_fg_match['team'] and ff_player_info['birthdate']==best_fg_match['birthdate']:
+        print('Looks like there is a perfect match!')
+        perform_merge = input('Do you want to merge in the FleaFlicker ID into the existing match?')
+        if perform_merge:
+            sql_update = 'UPDATE reference.player_names ' +\
+                        'SET ff_id = \''+str(ff_id)+'\'' +\
+                        'WHERE fg_id=\''+str(fg_id_tentative)+'\''
+            print(sql_update)
+            bbdb.execute(sql_update)
+            player_names.push_player_names_to_gs()
+        else:
+            print('OK, won\'t update')
     else:
         # If it's not already in the list of player names, see if there is a match in the raw FG data
         ff_sql = \
@@ -248,6 +241,48 @@ def find_other_ids_w_ff(ff_id):
                     print('OK, won\'t update')
             else:
                 'Cannot find an exact name match in the FG projections'
+
+# This gets the best-matching FG id given a FF id
+def get_fg_id_from_ff_id(ff_id):
+    from fuzzywuzzy import fuzz
+    from fuzzywuzzy import process
+
+    from scraping import scrape_ff
+    from munging import player_names
+
+    # Get FF info on a player
+    player = scrape_ff.get_ff_player_info(ff_id)
+    #print('Searching for a match for '+player['name'] + ' in the FanGraphs player list')
+    #print(player)
+
+    # Find the best match for the name in the FF player pool
+    names = player_names.get_player_names()
+    bestmatch = process.extract(player['name'], names['name'], limit=1, scorer=fuzz.token_sort_ratio)
+    name, fuzzratio, row = bestmatch[0]
+    player_rostered = names.loc[row]
+    return player_rostered.to_dict()
+
+
+# This gets the best-matching FG id given a FF id
+def get_mlb_id_from_ff_id(ff_id):
+    from fuzzywuzzy import fuzz
+    from fuzzywuzzy import process
+
+    from scraping import scrape_ff
+
+    # Get FF info on a player
+    player = scrape_ff.get_ff_player_info(ff_id)
+    print('Fleaflicker player name is '+player['name'])
+
+    # Find the best match for the name in the MLB player pool
+    names_mlb = pd.read_sql_query(sql='SELECT * FROM REFERENCE.player_pool_mlb', con=bbdb)
+    bestmatch = process.extract(player['name'], names_mlb['mlb_name'], limit=1, scorer=fuzz.token_sort_ratio)
+    name, fuzzratio, row = bestmatch[0]
+    player_mlb = names_mlb.loc[row]
+    #print(player_mlb)
+    print('MLB player best match is '+player_mlb[1])
+    return player_mlb[0]
+
 
 def append_new_fg_to_names():
     import sys
@@ -383,5 +418,56 @@ def populate_yahoo():
                 print(sql_update)
                 bbdb.execute(sql_update)
     player_names.push_player_names_to_gs()
+
+
+
+# This updates reference.player_bios with someone's birthday by querying fangraphs
+# given their fg_id
+# Returns player_info, result.rowcount
+def insert_birthday(fg_id):
+    import datetime
+    from scraping import scrape_fg_projections
+
+    # First check to make sure the fg_id is valid
+    try:
+        player_info = scrape_fg_projections.get_fg_player_info(fg_id)
+    except AttributeError:
+        print('There is an error finding fg_id '+fg_id+' on FanGraphs')
+
+
+    # Then make sure it's in the database
+    check_fg_id_exists = """
+        SELECT count(fg_id) FROM reference.player_bios 
+        WHERE fg_id = '{}'
+        """.format(fg_id)
+    result = bbdb.execute(check_fg_id_exists)
+
+
+    # Then make sure it's in the database
+    check_fg_id_exists = """
+        SELECT fg_id, count(fg_id) as num_fg_id FROM reference.player_bios 
+        WHERE fg_id = '{}'
+        GROUP BY fg_id
+        """.format(fg_id)
+    results = bbdb.execute(check_fg_id_exists)
+    if results.rowcount==0:
+        insert_fg_id = """
+            INSERT INTO reference.player_bios (fg_id)
+            VALUES ('{}')
+            """.format(fg_id)
+        insert_results = bbdb.execute
+        if insert_results.rowcount==0:
+            print('Error!  Please check')
+
+    # Now that we are confident the player is in the list, update his birthdate
+    str_birthdate = str(player_info['birthdate'])
+    update_birthdate_sql = """
+        UPDATE reference.player_bios 
+        SET birthdate = '{}'
+        WHERE fg_id = '{}'
+        """.format(str_birthdate, fg_id)
+    result = bbdb.execute(update_birthdate_sql)
+    return player_info, result.rowcount
+
 
 
