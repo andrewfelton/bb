@@ -137,3 +137,91 @@ def scrape_fg_leaderboard(fg_leaderboard_url, gs_name=False, tablename=False):
     import pandas as pd
     import datetime
     from selenium.webdriver.common.action_chains import ActionChains
+
+    driver = selenium_utilities.start_driver(headless=False)
+    driver = fg_login(driver)
+
+    driver.get(fg_leaderboard_url)
+    time.sleep(2)
+    print('Arrived at '+driver.current_url)
+
+    btn_dl_projections = driver.find_element_by_id('LeaderBoard1_cmdCSV')
+
+    actions = ActionChains(driver)
+    actions.move_to_element(btn_dl_projections).perform()
+    driver.execute_script("window.scrollBy(0, 200);")
+
+    btn_dl_projections.click()
+    time.sleep(3)
+
+    basepath = "/Users/andrewfelton/Documents/bb/bb-2021"
+    dl_file = "/Users/andrewfelton/Downloads/docker/FanGraphs\ Leaderboard.csv"
+
+    today = date.today().strftime("%Y%m%d")
+    new_file = basepath + "/data/fangraphs/relievers_last14_" + today + ".csv"
+    stream_command = os.popen('mv ' + dl_file + ' ' + new_file)
+    mv_file = stream_command.read()
+
+    # create the soft link
+    ln_file = basepath + "/data/fangraphs/relievers_last14.csv"
+    command_ln = os.popen('ln -sf ' + new_file + ' ' + ln_file)
+
+    driver.close()
+    #selenium_utilities.stop_selenium('bbsel')
+    print("Finished scraping "+ ln_file)
+
+    relievers_last14 = pd.read_csv(ln_file)
+    relievers_last14.insert(0, 'asof_date', date.today().strftime('%Y-%m-%d'))
+    relievers_last14.rename(columns={
+        'playerid':'fg_id',
+        "CSW%": "CSW_pct", "K%": "K_pct",
+        "BB%": "BB_pct", "SwStr%": "SwStr_pct",
+        'vFA (sc)':'vFA', 'LOB%':'LOB_pct', 'HR/FB':'HR_FB'
+        }, inplace=True)
+    relievers_last14[['fg_id']] = relievers_last14[['fg_id']].astype(str)
+    relievers_last14.sort_values(by='WPA', ascending=False, inplace=True)
+
+    # Check to confirm that all the fg_id are in the names table
+    # To avoid pandas issues take it out of the dataframe and then put it back in
+    # fg_ids = relievers_last14[['fg_id']].values
+    #put_missing_in_GS(id_list=pd.DataFrame(fg_ids, columns=['fg_id']), type='fg_id')
+
+    tablename = "relievers_last14_raw"
+    bbdb = postgres.connect_to_bbdb()
+
+    query_tables = "SELECT * FROM pg_catalog.pg_tables WHERE schemaname='tracking';"
+    tables_list_result = bbdb.execute(query_tables)
+    tables_list = []
+    for table in tables_list_result:
+        tables_list.append(table[1])
+
+    if (tablename in tables_list):
+        command = 'TRUNCATE TABLE tracking.'+tablename
+        bbdb.execute(command)
+    relievers_last14.to_sql(tablename, bbdb, schema='tracking', if_exists='append', index=False)
+
+    return relievers_last14
+
+def get_fg_player_info(fg_id):
+    #fg_id = '2429'
+    import requests
+    from bs4 import BeautifulSoup
+    import dateparser
+
+    player = {}
+
+    fg_player_url = 'http://www.fangraphs.com/statss.aspx?playerid='+fg_id
+    #print(fg_player_url)
+    r = requests.get(url=fg_player_url)
+    soup = BeautifulSoup(r.text, 'lxml')
+    div_player_info = soup.find('div', {'class':'player-info-box-header'})
+    player['name'] = div_player_info.find('div', {'class':'player-info-box-name'}).find('h1').text.strip()
+    try:
+        player['team'] = div_player_info.find('div', {'class':'player-info-box-name-team'}).find('a').text.strip()
+    except AttributeError:
+        player['team'] = div_player_info.find('div', {'class':'player-info-box-name-team'}).text.strip()
+
+    player['birthdate'] = soup.find('tr', {'class':'player-info__bio-birthdate'}).find('td').text
+    player['birthdate'] = player['birthdate'].split(' ')[0]
+    player['birthdate'] = dateparser.parse(player['birthdate']).date()
+    return player
