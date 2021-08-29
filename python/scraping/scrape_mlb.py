@@ -8,13 +8,9 @@ def scrape_mlb_player_pool():
     import time
     import unidecode
 
-    import sys
-    sys.path.append('python/munging')
-    import player_names
-    sys.path.append('python/general')
-    import postgres
-    import selenium_utilities
-
+    from munging import player_names
+    from general import postgres
+    from general import selenium_utilities
 
     # EXTRACT
     url_mlb_players = 'https://www.mlb.com/players'
