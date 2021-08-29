@@ -4,3 +4,6 @@
 bb-2021-2b810d2e3d25.json
 .vscode/launch.json
 .vscode/settings.json
+python/testing/*.ipynb
+python/test.py
+python/todo.txt
