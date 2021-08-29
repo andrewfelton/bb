@@ -1,9 +1,8 @@
-import sys
-sys.path.append('python/general')
-import postgres
 import pandas as pd
 import gspread
 import gspread_dataframe as gsdf
+
+from general import postgres
 
 def post_sos_d2_drafts(draftnums):
 
@@ -41,12 +40,19 @@ def inseason_standings_sos():
 
 def update_relievers_last14():
     bbdb = postgres.connect_to_bbdb()
-    relievers_last14 = pd.read_sql('SELECT r."Name", "Team", r."G", r."IP", r."SV", r."HLD", r."gmLI", r."WPA", r."ERA", r."kwERA", r."xFIP", r."SIERA", r."xERA", r."CSW_pct", r."K_pct", r."BB_pct", r."SwStr_pct", r."vFA", r."BABIP", r."LOB_pct", r."HR_FB", r.asof_date, r.fg_id FROM tracking.relievers_last14_raw r', con=bbdb)
-    relievers_last14[['fg_id']] = relievers_last14[['fg_id']].astype(str)
-    sos_rosters = pd.read_sql('SELECT fg_id, sos."Team" as sos_team FROM rosters.sos', con=bbdb)
-    sos_rosters[['fg_id']] = sos_rosters[['fg_id']].astype(str)
-    relievers_last14 = relievers_last14.merge(sos_rosters, how='left', on='fg_id')
-    
+    relievers_last14 = pd.read_sql('''
+        SELECT 
+            r."Name", r."Team", ff_elig.ff_elig, r."G", r."IP", r."SV",
+            r."HLD", r."gmLI", r."WPA", r."ERA", r."kwERA", 
+            r."xFIP", r."SIERA", r."xERA", r."CSW_pct", r."K_pct", 
+            r."BB_pct", r."SwStr_pct", r."vFA", r."BABIP", r."LOB_pct", 
+            r."HR_FB", r.asof_date, r.fg_id,
+            rosters_sos."Team" as sos_team
+        FROM tracking.relievers_last14_raw r
+        LEFT JOIN reference.player_pool_ff ff_elig ON r.fg_id=ff_elig.fg_id
+        LEFT JOIN rosters.sos rosters_sos ON r.fg_id=rosters_sos.fg_id
+        ORDER BY r."WPA" DESC
+        ''', con=bbdb)
     gc = gspread.service_account(filename='./bb-2021-2b810d2e3d25.json')
     bb2021 = gc.open("BB 2021 InSeason")
     sheettitle = "Relievers - Last 14"
