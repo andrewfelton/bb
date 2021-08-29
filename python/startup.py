@@ -1,28 +1,31 @@
 # This just has useful stuff to run while coding
 
+print('Running startup.py')
+
 from datetime import date
 from datetime import datetime
 import time
-
-import sys
-sys.path.append('python/general')
-import utilities
-import postgres
-import classes
-sys.path.append('python/munging')
-import player_names
-import rosters
-sys.path.append('python/analysis')
-import valuations
-import calculations
-import player_pool_stats
-sys.path.append('python/scraping')
-import scrape_razzball
-import scrape_bbref
-
 import pandas as pd
 import gspread
 import gspread_dataframe as gsdf
+
+
+from scraping import scrape_fg_projections
+from scraping import scrape_ff
+from scraping import scrape_razzball
+from scraping import scrape_prospectus
+from scraping import scrape_yahoo
+from scraping import scrape_savant
+from scraping import scrape_xxxfip
+from scraping import scrape_bbref
+
+from munging import update_spreadsheets
+
+from analysis import valuations
+
+from general import classes
+from general import utilities
+from general import postgres
 
 league_sos = classes.league('SoS')
 league_legacy = classes.league('Legacy')
