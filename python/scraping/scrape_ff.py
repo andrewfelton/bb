@@ -66,6 +66,7 @@ def rosters(league, upload_to_db=True):
     names = player_names.get_player_names()
     df_export = df_export.merge(right=names[['ff_id', 'fg_id']], how='left', on='ff_id')
 
+    # Go through the Fleaflicker players that don't have matching FG IDs
     missing_fg_id = df_export[df_export['fg_id'].isna()]
     if len(missing_fg_id)>0:
         print('Miising fg_id for '+str(len(missing_fg_id.values))+' player(s):')
@@ -170,10 +171,15 @@ def scrape_ff_player_pool():
     # EXTRACT
     pitcher_base_url = 'https://www.fleaflicker.com/mlb/leagues/23172/players?season=2021&statType=1&sortMode=1&position=1536&isFreeAgent=false&tableSortDirection=DESC&tableSortName=pv7&tableOffset='
     hitter_base_url  = 'https://www.fleaflicker.com/mlb/leagues/23172/players?season=2021&statType=1&sortMode=1&position=511&isFreeAgent=false&tableSortDirection=DESC&tableSortName=pv7&tableOffset='
+    rp_base_url      = 'https://www.fleaflicker.com/mlb/leagues/23172/players?season=2021&statType=1&sortMode=1&position=1536&isFreeAgent=false&tableSortName=st25&tableSortDirection=DESC&tableOffset='
 
     players = []
-    for baseurl in [hitter_base_url, pitcher_base_url]:
-        for i in range(0, 601, 20):
+    for baseurl in [hitter_base_url, pitcher_base_url, rp_base_url]:
+        count_top = 601
+        if baseurl in [rp_base_url]:
+            count_top = 201
+            
+        for i in range(0, count_top, 20):
             url = baseurl + str(i)
             page = requests.get(url)
             print('Got '+url)
@@ -196,6 +202,7 @@ def scrape_ff_player_pool():
                 count = count+1
 
     df_players = pd.DataFrame(players, columns=['ff_id', 'ff_name', 'ff_url', 'ff_team', 'ff_elig'])
+    df_players.drop_duplicates(subset=['ff_id'], inplace=True, ignore_index=True)
 
     # TRANSFORM
     def combine_eligibilities(row):
@@ -244,3 +251,45 @@ def scrape_ff_player_pool():
     print('Uploaded FleaFlicker player pool')
 
     return df_players
+
+
+# Get the FF info about a player
+# Returns player name, team, and birthdate
+def get_ff_player_info(ff_id):
+    import dateparser
+    import requests
+    from bs4 import BeautifulSoup
+
+    url_ff_player = 'https://www.fleaflicker.com/mlb/leagues/23172/players?playerId='+ff_id+'&sortMode=1'
+    #print(url_ff_player)
+    r = requests.get(url_ff_player)
+    soup = BeautifulSoup(r.text, 'lxml')
+
+    #print(r.url)
+    soup = BeautifulSoup(r.text, 'lxml')
+
+    link_player_info = soup.find('a', {'class':'player-text'})
+    #print(link_player_info)
+    player_name = link_player_info.text
+    #print(player_name)
+
+    url_player_info = 'https://www.fleaflicker.com'+link_player_info['href']
+    #print(url_player_info)
+
+    r2 = requests.get(url_player_info)
+    soup2 = BeautifulSoup(r2.text, 'lxml')
+
+    player = {}
+    player['name'] = player_name
+
+    dl_player_info = soup2.find('div', {'class':'panel-default'}).find('dl')
+    dts = dl_player_info.find_all('dt')
+    for dt in dts:
+        #print(dt.text + ': ' + dt.nextSibling.text)
+        if dt.text=='Team':
+            player['team'] = dt.nextSibling.text.strip()
+        if dt.text=='Age':
+            player['birthdate'] = dateparser.parse(dt.nextSibling.find('span')['title']).date()
+
+    #print(player)
+    return player
