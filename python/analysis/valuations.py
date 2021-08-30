@@ -73,13 +73,9 @@ def create_combined_hitter_valuations(league):
 
 
 def create_combined_pitcher_valuations(league):
-    import sys
-    sys.path.append('python/general')
-    import utilities
-    sys.path.append('python/munging')
-    sys.path.append('python/analysis')
-    import calculations
-    import player_pool_stats
+    from general import utilities
+    from analysis import calculations
+    from analysis import player_pool_stats
 
     assert league.league_name in ['SoS', 'Legacy']
     combined_pitchers = player_pool_stats.create_combined_pitchers(league)
@@ -105,18 +101,14 @@ def create_combined_pitcher_valuations(league):
 
 
 def create_combined_valuations(league):
-
-    import sys
-    sys.path.append('python/general')
-    import postgres
-    sys.path.append('python/munging')
-    import player_names
-    sys.path.append('python/analysis')
     import pandas as pd
-    import format_gs
     import gspread
     import gspread_dataframe as gsdf
     import gspread_formatting as gsfmt
+
+    from general import postgres
+    from munging import player_names
+    from general import gs
 
     assert league.league_name in ['SoS', 'Legacy']
     #league = 'SoS'
@@ -163,15 +155,14 @@ def create_combined_valuations(league):
 
 
 def update_inseason_valuations(league_sos, league_legacy):
-    import sys
-    sys.path.append('python/general')
-    import gs
-    import utilities
-    import postgres
     import pandas as pd
     import gspread
     import gspread_dataframe as gsdf
 
+    from general import gs
+    from general import utilities
+    from general import postgres
+    
     sos_hitters = create_combined_hitter_valuations(league=league_sos) \
         .rename(columns={'zar': 'zar_sos', 'value': 'value_sos', 'value_600': 'value_600_sos'})
     legacy_hitters = create_combined_hitter_valuations(league=league_legacy) \
@@ -253,13 +244,9 @@ def update_inseason_valuations(league_sos, league_legacy):
 
 
 def create_pitcher_valuations(league, stats):
-    import sys
-    sys.path.append('python/general')
-    import utilities
-    sys.path.append('python/munging')
-    sys.path.append('python/analysis')
-    import calculations
-    import player_pool_stats
+    from general import utilities
+    from analysis import calculations
+    from analysis import player_pool_stats
 
     assert league.league_name in ['SoS', 'Legacy']
     pitchers = stats
@@ -281,13 +268,9 @@ def create_pitcher_valuations(league, stats):
 
 
 def create_hitter_valuations(league, stats):
-    import sys
-    sys.path.append('python/general')
-    import utilities
-    sys.path.append('python/munging')
-    sys.path.append('python/analysis')
-    import calculations
-    import player_pool_stats
+    from general import utilities
+    from analysis import calculations
+    from analysis import player_pool_stats
 
     assert league.league_name in ['SoS', 'Legacy']
     hitters = stats
@@ -306,6 +289,7 @@ def create_hitter_valuations(league, stats):
                'zar','value']
     columns = utilities.flatten(columns)
     hitters = hitters[columns]
+    hitters.reset_index(inplace=True)
     return hitters
 
 
