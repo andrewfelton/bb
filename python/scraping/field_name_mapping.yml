@@ -1,0 +1,9 @@
+fg: 
+  'playerid': fg_id
+  'csw%': csw_pct
+  'k%': k_pct
+  'bb%': bb_pct
+  'swstr%': swstr_pct
+  'vfa (sc)': vfa
+  'lob%': lob_pct
+  'hr/fb': hr_fb
