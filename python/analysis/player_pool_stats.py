@@ -91,19 +91,16 @@ def create_combined_hitters(ls, pa=0):
 
 
 def create_combined_pitchers(ls):
-    import sys
-    sys.path.append('python/general')
-    import utilities
-    sys.path.append('python/munging')
-    import postgres
     import pandas as pd
-    import player_names
+    from munging import player_names
+    from general import postgres
+    from general import utilities
 
     bbdb = postgres.connect_to_bbdb()
 
     query = (
             'SELECT \'razz\' as source, fg_id, ip, qs, era, whip, k as so, sv, hld ' +
-            'FROM proj.razz_pitchers_ros '
+            'FROM proj.razz_pitchers'
     )
     df_razz = pd.read_sql_query(query, bbdb)
     df_razz['svhld'] = (df_razz['sv'] + df_razz['hld'])
@@ -131,12 +128,12 @@ def create_combined_pitchers(ls):
 
 
     weights = {'system': ['fg_dc', 'thebat', 'thebatx', 'pod', 'razz'],
-               'sys_weight': [1, 1, 1.2, .1, 1]}
+               'sys_weight': [1, 1, 1.2, 0, .01]}
     weights = pd.DataFrame(weights)
     df = df.merge(right=weights, how='left', left_on='source', right_on='system')
 
     weights_ip = {'system': ['fg_dc', 'thebat', 'thebatx', 'pod', 'razz'],
-               'sys_weight': [.25, 0, 0, 0, 1]}
+               'sys_weight': [.25, 0, 0, 0, .01]}
     weights_ip = pd.DataFrame(weights_ip)
     df_ip = df_ip.merge(right=weights_ip, how='left', left_on='source', right_on='system')
 
