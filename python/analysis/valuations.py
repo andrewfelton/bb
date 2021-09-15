@@ -18,7 +18,8 @@ def value_pool_hitting(league, player_pool, type):
     season_length = l_date - f_date
     pct_through = (l_date - date.today()).days / (l_date - f_date).days
 
-    player_pool['sample'] = player_pool['pa'] > 500*pct_through
+    #player_pool['sample'] = player_pool['pa'] > 500*pct_through
+    player_pool['sample'] = True
     for run in range(1,3):
         player_pool = calculations.calc_z(df=player_pool, ls=league, type='hitting')
         player_pool['sample'] = player_pool.apply(lambda row: row.zar > 0, axis=1)
@@ -26,6 +27,36 @@ def value_pool_hitting(league, player_pool, type):
     columns = ['name','fg_id','type','elig','pa',
                league.hitting_counting_stats,
                league.hitting_rate_stats,
+               'zar','value']
+    columns = utilities.flatten(columns)
+    player_pool = player_pool[columns]
+    return player_pool
+
+
+
+def value_pool_pitching(league, player_pool, type):
+    from datetime import date
+    from general import utilities
+    from analysis import calculations
+    from analysis import player_pool_stats
+
+    assert type in ['B', 'P']
+    player_pool['type']=type
+
+    # calc % of season left for determining PAs for sample threshold
+    f_date = date(2021, 4, 1)
+    l_date = date(2021, 9, 30)
+    season_length = l_date - f_date
+    pct_through = (l_date - date.today()).days / (l_date - f_date).days
+
+    player_pool['sample'] = True
+    for run in range(1,3):
+        player_pool = calculations.calc_z(df=player_pool, ls=league, type='pitching')
+        #player_pool['sample'] = player_pool.apply(lambda row: row.zar > 0, axis=1)
+
+    columns = ['name','fg_id','type','elig','ip',
+               league.pitching_counting_stats,
+               league.pitching_rate_stats,
                'zar','value']
     columns = utilities.flatten(columns)
     player_pool = player_pool[columns]
@@ -81,11 +112,7 @@ def create_combined_pitcher_valuations(league):
     combined_pitchers = player_pool_stats.create_combined_pitchers(league)
     combined_pitchers['type']='P'
 
-    if league.league_name == 'SoS':
-        combined_pitchers['sample'] = combined_pitchers.apply(lambda row: row.qs > 10.0 or row.sv > 5 or row.hld > 5, axis=1)
-    elif league.league_name == 'Legacy':
-        combined_pitchers['sample'] = combined_pitchers.apply(lambda row: row.ip > 100.0 or row.svhld > 10, axis=1)
-
+    combined_pitchers['sample'] = True
     for run in range(1,3):
         combined_pitchers = calculations.calc_z(df=combined_pitchers, ls=league, type='pitching')
         combined_pitchers['sample'] = combined_pitchers.apply(lambda row: row.zar > 0, axis=1)
