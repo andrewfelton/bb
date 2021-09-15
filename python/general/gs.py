@@ -78,7 +78,7 @@ def format_gsheet(sheet):
 
     hitting_rate_stats = ['avg','obp','ops','slg']
     hitting_rate_format = gsfmt.CellFormat(numberFormat=gsfmt.NumberFormat(type='NUMBER', pattern='0.000'))
-    pitching_rate_stats = ['era','whip','DRA','xxxFIP']
+    pitching_rate_stats = ['era','whip','DRA','xxxFIP','gmli','wpa','kwera','xfip']
     pitching_rate_format = gsfmt.CellFormat(numberFormat=gsfmt.NumberFormat(type='NUMBER', pattern='0.00'))
     counting_stats = ['hr','r','rbi','sb','pa','ab','qs','w','so','sv','hld','svhld','ip','cFIP']
     counting_format = gsfmt.CellFormat(numberFormat=gsfmt.NumberFormat(type='NUMBER', pattern='0'))
@@ -93,13 +93,6 @@ def format_gsheet(sheet):
             gsfmt.format_cell_range(sheet, colnum+':'+colnum, counting_format)
         if header[0:4]=='zar_' or header[0:6]=='value_':
             gsfmt.format_cell_range(sheet, colnum+':'+colnum, value_format)
-
-    value_col = headers.index('value_sos')
-    sheet.sort((value_col+1, 'des'))
-
-    sheet.set_basic_filter(name=None)
-
-# format_gs(sheet=bb2021.worksheet('Proj - Pitchers'))
 
 def format_gsheet_all():
     import gspread
