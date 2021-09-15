@@ -93,8 +93,7 @@ def create_combined_hitters(ls, pa=0):
 def create_combined_pitchers(ls):
     import pandas as pd
     from munging import player_names
-    from general import postgres
-    from general import utilities
+    from general import postgres, utilities
 
     bbdb = postgres.connect_to_bbdb()
 
@@ -205,20 +204,18 @@ def create_actuals_hitters(ls, year=2021):
     combined_hitters.drop_duplicates(inplace=True)
     return combined_hitters
 
-def create_actuals_pitchers(year=2021):
-    import sys
-    sys.path.append('python/general')
-    import utilities
-    sys.path.append('python/munging')
-    import postgres
+def create_actuals_pitchers(ls, year=2021):
     import pandas as pd
-    import player_names
+    
+    from general import utilities
+    from general import postgres
+    from munging import player_names
 
     bbdb = postgres.connect_to_bbdb()
     query = ('SELECT pit_std.year, pit_std.bbref_id, pit_std."Tm" as team, pit_std."IP" as ip, pit_start."GS" as gs, pit_start."QS" as qs, pit_std."SO" as so, pit_std."ERA" as era, pit_std."WHIP" as whip, pit_relief."SV" as sv, pit_relief."Hold" as hld FROM '+
-             '(SELECT * FROM reference.bbref_pitching_standard) as pit_std '+
-             'LEFT JOIN (SELECT * FROM reference.bbref_pitching_starter) as pit_start ON pit_std.bbref_id=pit_start.bbref_id AND pit_std.year=pit_start.year AND pit_std."Tm"=pit_start."Tm" '+
-             'LEFT JOIN (SELECT * FROM reference.bbref_pitching_reliever) as pit_relief ON pit_std.bbref_id=pit_relief.bbref_id AND pit_std.year=pit_relief.year AND pit_std."Tm"=pit_relief."Tm" '+
+             '(SELECT * FROM tracking.bbref_pitching_standard) as pit_std '+
+             'LEFT JOIN (SELECT * FROM tracking.bbref_pitching_starter) as pit_start ON pit_std.bbref_id=pit_start.bbref_id AND pit_std.year=pit_start.year AND pit_std."Tm"=pit_start."Tm" '+
+             'LEFT JOIN (SELECT * FROM tracking.bbref_pitching_reliever) as pit_relief ON pit_std.bbref_id=pit_relief.bbref_id AND pit_std.year=pit_relief.year AND pit_std."Tm"=pit_relief."Tm" '+
              'WHERE pit_std.year='+str(year))
     df = pd.read_sql_query(query, bbdb)
     df['ip'] = df['ip'].str.replace('.1', '.33', regex=False)
