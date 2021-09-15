@@ -4,6 +4,7 @@ import time
 
 import pandas as pd
 import requests
+requests.urllib3.disable_warnings()
 from bs4 import BeautifulSoup
 import gspread
 import gspread_dataframe as gsdf
@@ -44,9 +45,8 @@ league_legacy = classes.league('Legacy')
 # Scrape latest data
 if '-fg' in sys.argv or '-all' in sys.argv:
     print('Scraping FanGraphs projections...')
-    scrape_fg_projections.scrape_all_fg_projections()
-    scrape_fg_projections.scrape_fg_leaderboard(fg_leaderboard_url='https://www.fangraphs.com/leaders.aspx?pos=all&stats=rel&lg=all&qual=0&type=c%2c7%2c13%2c11%2c114%2c70%2c63%2c-1%2c6%2c224%2c62%2c122%2c332%2c-1%2c331%2c120%2c121%2c113%2c-1%2c139%2c-1%2c43%2c44%2c51&season=2021&month=2&season1=2021&ind=0&team=0&rost=0&age=0&filter=&players=0&startdate=2021-01-01&enddate=2021-12-31&sort=8%2cd&page=1_500')
-    update_spreadsheets.update_relievers_last14()
+    #scrape_fg_projections.scrape_all_fg_projections()
+    scrape_fg_projections.scrape_fg_daily_leaderboards()
     print('Finished scraping FanGraphs')
 
 if '-bp' in sys.argv or '-all' in sys.argv:
@@ -75,8 +75,8 @@ if '-bbref' in sys.argv or '-all' in sys.argv:
 
 if '-razz' in sys.argv or '-all' in sys.argv:
     print('Scraping Razzball projections...')
-    #scrape_razzball.scrape_razz(mytype='pitchers', url="https://razzball.com/steamer-pitcher-projections/")
-    #scrape_razzball.scrape_razz(mytype='batters', url="https://razzball.com/steamer-hitter-projections/")
+    scrape_razzball.scrape_razz(mytype='razz_pitchers', url="https://razzball.com/restofseason-pitcherprojections/")
+    scrape_razzball.scrape_razz(mytype='razz_batters',  url="https://razzball.com/restofseason-hitterprojections/")
     print('Finished Razzball projections')
 
 # Update combined projections
@@ -92,6 +92,9 @@ if '-elig' in sys.argv:
 # Update rosters
 print('Updating for ' + league_sos.league_name)
 rosters_sos = scrape_ff.rosters(league_sos)
+print('Updating rosters for ' + league_sos.league_name)
+#scrape_ff.update_ff_rosters()
+
 
 print('Updating for ' + league_legacy.league_name)
 rosters_legacy = scrape_yahoo.scrape_yahoo_roster(league_num='26574')
@@ -124,7 +127,7 @@ if '-razz' in sys.argv or '-all' in sys.argv:
     print('Good upcoming streamers for SoS:')
     print(
         razz_streamers[
-            (razz_streamers['SoS_Team'].isna()) & (razz_streamers['era']<4.25)
+            (razz_streamers['SoS_Team'].isna()) & (razz_streamers['era']<4.00)
         ].
         append(
             razz_streamers[(razz_streamers['SoS_Team']=='JohnnyFang\'s Team')]
