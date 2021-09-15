@@ -184,15 +184,16 @@ def find_other_ids_w_ff(ff_id):
     if len(ff_info)==0:
         print('This ff_id is not in the FF player pool.  Please rerun the player pool generator update_player_pools.py')
         return False
-
+    
+    # We have confirmed that the player is in the FF player pool.  Print the info
     ff_name = ff_info['ff_name'].to_list()[0]
     print(ff_name + ' is in the Fleaflicker player pool.  Here is the info available:')
     ff_player_info = scrape_ff.get_ff_player_info(ff_id)
     print(ff_player_info)
 
-    # Second, if it's in the FF player pool, get the best FG match for it based on name
+    # If he's in the FF player pool, get the best FG match for it based on name
     best_fg_match = player_names.get_fg_id_from_ff_id(ff_id)
-    print('Here is the best match in the existing FanGraphs player pool')
+    print('Looking for the best match in the existing FanGraphs player pool')
     fg_id_tentative = best_fg_match['fg_id']
     best_fg_match = scrape_fg_projections.get_fg_player_info(fg_id_tentative)
     best_fg_match
