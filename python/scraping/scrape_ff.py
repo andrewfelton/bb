@@ -1,3 +1,4 @@
+
 def login():
     import time
 
@@ -262,7 +263,7 @@ def get_ff_player_info(ff_id):
 
     url_ff_player = 'https://www.fleaflicker.com/mlb/leagues/23172/players?playerId='+ff_id+'&sortMode=1'
     #print(url_ff_player)
-    r = requests.get(url_ff_player)
+    r = requests.get(url_ff_player, verify=False)
     soup = BeautifulSoup(r.text, 'lxml')
 
     #print(r.url)
@@ -293,3 +294,148 @@ def get_ff_player_info(ff_id):
 
     #print(player)
     return player
+
+
+
+def scrape_daily_roster(scoring_period, team_id):
+    import requests
+    import pandas as pd
+    import datetime
+    import json
+    from general import postgres
+    bbdb = postgres.connect_to_bbdb()
+
+    sql_delete_rosters_this_period = '''
+        DELETE FROM sos_2021.rosters 
+        WHERE scoring_period = '{}' AND team_id = '{}'
+    '''.format(scoring_period, team_id)
+    bbdb.execute(sql_delete_rosters_this_period)
+
+    league_id = '23172'
+
+    query = {
+        'sport':'MLB', 
+        'league_id':league_id, 
+        'team_id':team_id, 
+        'season':'2021', 
+        'scoring_period':scoring_period}
+    response = requests.get('https://www.fleaflicker.com/api/FetchRoster', params=query)
+    response_json = response.json()
+
+    roster = []
+    for group in response_json['groups']:
+        for slot in group['slots']:
+            player = [slot['position']['label']] # The position
+            # Need to check if there is a player or if the slot is empty
+            if 'leaguePlayer' in slot.keys():
+                player.append(str(slot['leaguePlayer']['proPlayer']['id']))
+                player.append(slot['leaguePlayer']['proPlayer']['nameFull'])
+            else:
+                player.append('NULL')
+                player.append('NULL')
+            #print(player)
+            roster.append(player)
+    #print(roster)
+
+    roster = pd.DataFrame(roster, columns=['position', 'ff_id', 'ff_name'])
+    roster['league_id'] = query['league_id']
+    roster['team_id'] = query['team_id']
+    roster['scoring_period'] = query['scoring_period']
+    epochtime = int(response_json['lineupPeriod']['low']['startEpochMilli'])
+    scoring_date = datetime.datetime.fromtimestamp(epochtime/1000.0).date()
+    roster['scoring_date'] = scoring_date
+
+    roster.to_sql(name='rosters', con=bbdb, schema='sos_2021', if_exists='append')
+    print('Uploaded roster for team_id ' + str(query['team_id']) + ' for date ' + str(scoring_date))
+
+
+
+def update_ff_rosters():
+    import pandas as pd
+    import requests
+    import json
+    import datetime
+    import time
+
+    from general import postgres
+
+    bbdb = postgres.connect_to_bbdb()
+
+    league_id = '23172'
+
+    # Get the list of teams
+    query = {
+        'sport':'MLB', 
+        'league_id':league_id, 
+        'season':'2021', 
+        'scoring_period':'1'}
+    response = requests.get('https://www.fleaflicker.com/api/FetchLeagueRosters', params=query)
+    response_json = response.json()
+    #with open('fleaflicker_api_test.json', 'w') as f:
+    #    json.dump(response_json, f, indent=4)
+
+    teams = []
+    for roster in response_json['rosters']:
+        print(roster['team']['name'])
+        team = [roster['team']['name'], roster['team']['id']]
+        teams.append(team)
+
+    teams = pd.DataFrame(teams, columns=['team_name', 'team_id'])
+    teams['league_id'] = query['league_id']
+    #print(teams)
+
+    teams.to_sql(name='teams', con=bbdb, schema='sos_2021', if_exists='replace')
+
+
+    # Get the list of eligible scoring periods from one team
+    teams = pd.read_sql('SELECT * FROM sos_2021.teams LIMIT 1', con=bbdb)
+    league_id = teams.loc[0, 'league_id']
+    team_id = teams.loc[0, 'team_id']
+
+    query = {
+        'sport':'MLB', 
+        'league_id':league_id, 
+        'team_id':team_id, 
+        'season':'2021', 
+        'scoring_period':'1'}
+    response = requests.get('https://www.fleaflicker.com/api/FetchRoster', params=query)
+    response_json = response.json()
+    with open('fleaflicker_api_test.json', 'w') as f:
+        json.dump(response_json, f, indent=4)
+
+
+    # Populate the table of all scoring dates
+    scoring_dates = []
+    for scoring_day in response_json['eligibleLineupPeriods']:
+        scoring_period = scoring_day['low']['ordinal']
+        epochmilli = int(scoring_day['low']['startEpochMilli'])
+        scoring_date = datetime.datetime.fromtimestamp(epochmilli/1000.0).date()
+        scoring_dates.append([scoring_period, scoring_date])
+    scoring_dates = pd.DataFrame(scoring_dates, columns=['scoring_period', 'scoring_date'])
+    scoring_dates.to_sql(name='scoring_dates', con=bbdb, schema='sos_2021', if_exists='replace')
+
+
+    # Get the list of scoring dates that need to be updated
+    today = datetime.date.today()
+    missing_scoring_periods = pd.read_sql('''
+    SELECT scoring_period::integer, scoring_date FROM sos_2021.scoring_dates
+    WHERE (scoring_date <= '{}') AND
+        (scoring_period >= (
+        SELECT DISTINCT MAX(scoring_period::integer) AS scoring_period
+        FROM sos_2021.rosters
+        ))
+    '''.format(today, today), con=bbdb)
+
+
+    # Loop through all the teams and get the rosters
+    teams = pd.read_sql('SELECT * FROM sos_2021.teams', con=bbdb)
+
+    league_id = teams.loc[0, 'league_id']
+    team_ids = teams['team_id'].to_list()
+
+    for scoring_period in missing_scoring_periods['scoring_period'].to_list():
+        for team_id in team_ids:
+            scrape_daily_roster(scoring_period, team_id)
+            time.sleep(.5)
+
+

@@ -113,8 +113,9 @@ def scrape_razz(mytype, url, logged_in_driver=False, merge_ownership=True):
                     append = False
             if streamer[colnames.index('razz_id')]==1.0:
                 append = False
-            if str(streamer[colnames.index('value')])=='':
-                append = False
+            if 'value' in colnames:
+                if str(streamer[colnames.index('value')])=='':
+                    append = False
             if append:
                 streamers.append(streamer)
     df_streamers = pd.DataFrame(streamers, columns=colnames)

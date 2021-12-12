@@ -240,3 +240,35 @@ def create_actuals_pitchers(ls, year=2021):
     return combined_pitchers
 
 
+
+def create_last30_hitters(ls):
+    import pandas as pd
+    from general import utilities
+    from general import postgres
+    from general import classes
+    from munging import player_names
+
+    bbdb = postgres.connect_to_bbdb()
+
+    query = (
+        'SELECT bat.fg_id, bat.team, bat.pa, '+
+        'bat.hr, bat.r, bat.rbi, bat.sb, bat.obp, bat.obp+bat.slg as ops '+
+        'FROM tracking.batters_last30 AS bat')
+    df = pd.read_sql_query(query, bbdb)
+    df = df.fillna(value={'obp':0, 'ops': 0, 'pa':0, 'r':0, 'rbi':0, 'sb':0})
+    for c in ['pa', 'r', 'rbi', 'hr', 'sb']:
+        df[c] = df[c].replace(r'^\s*$', 0, regex=True)
+        df[c] = df[c].astype(int)
+    for c in ['obp', 'ops']:
+        df[c] = df[c].replace(r'^\s*$', 0, regex=True)
+        df[c] = df[c].astype(float)
+    #df = df[(df['fg_id'].notnull()) & (df['fg_id']!=u'')]
+
+    # merge in the names and reorder
+    names = player_names.get_player_names()
+    combined_hitters = df.merge(names[['fg_id', 'name']], on='fg_id', how='left')
+    output_stats = utilities.flatten([['fg_id', 'name', 'team', 'pa'],[ls.hitting_stats]])
+    combined_hitters = combined_hitters[output_stats]
+    combined_hitters.drop_duplicates(inplace=True)
+    return combined_hitters
+

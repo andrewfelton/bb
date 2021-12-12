@@ -120,29 +120,30 @@ if (1==0):
     fg_leaderboard_url = 'https://www.fangraphs.com/leaders.aspx?pos=all&stats=rel&lg=all&qual=0&type=c%2c7%2c13%2c11%2c114%2c70%2c63%2c-1%2c6%2c224%2c62%2c122%2c332%2c-1%2c331%2c120%2c121%2c113%2c-1%2c139%2c-1%2c43%2c44%2c51&season=2021&month=2&season1=2021&ind=0&team=0&rost=0&age=0&filter=&players=0&startdate=2021-01-01&enddate=2021-12-31&sort=8%2cd&page=1_500'
 
 
-
-
-
-def scrape_fg_leaderboard(fg_leaderboard_url, gs_name=False, tablename=False):
+def scrape_fg_leaderboard(fg_leaderboard_url, scrapedate, folder, filename, schema, table, driver=None):
     import os
     from datetime import date
-    import sys
-    sys.path.append('python/general')
-    import selenium_utilities
-    sys.path.append('python/munging')
-    import player_names
-    from player_names import put_missing_in_GS
-    import postgres
     import time
     import pandas as pd
     import datetime
     from selenium.webdriver.common.action_chains import ActionChains
+    import yaml
 
-    driver = selenium_utilities.start_driver(headless=False)
-    driver = fg_login(driver)
+    from scraping import scrape_fg_projections
+    from general import selenium_utilities
+    from general import postgres
+    from munging import player_names
+
+    bbdb = postgres.connect_to_bbdb()
+
+    driver_keepalive = True
+    if driver==None:
+        driver_keepalive = False
+        driver = selenium_utilities.start_driver(headless=False)
+        driver = scrape_fg_projections.fg_login(driver)
 
     driver.get(fg_leaderboard_url)
-    time.sleep(2)
+    time.sleep(1)
     print('Arrived at '+driver.current_url)
 
     btn_dl_projections = driver.find_element_by_id('LeaderBoard1_cmdCSV')
@@ -154,53 +155,91 @@ def scrape_fg_leaderboard(fg_leaderboard_url, gs_name=False, tablename=False):
     btn_dl_projections.click()
     time.sleep(3)
 
+    if not driver_keepalive:
+        driver.close()
+        driver.quit()
+
     basepath = "/Users/andrewfelton/Documents/bb/bb-2021"
     dl_file = "/Users/andrewfelton/Downloads/docker/FanGraphs\ Leaderboard.csv"
 
-    today = date.today().strftime("%Y%m%d")
-    new_file = basepath + "/data/fangraphs/relievers_last14_" + today + ".csv"
-    stream_command = os.popen('mv ' + dl_file + ' ' + new_file)
-    mv_file = stream_command.read()
+    new_file = "{basepath}/data/{folder}/{filename}_{scrapedate}.csv".format(
+        basepath=basepath, folder=folder, filename=filename, scrapedate=scrapedate
+    )
+    stream_command = 'mv {dl_file} {new_file}'.format(
+        dl_file=dl_file, new_file=new_file)
+    mv_file_exec = os.popen(stream_command)
+    print(mv_file_exec.read())
+    print("Finished scraping "+ new_file)
 
-    # create the soft link
-    ln_file = basepath + "/data/fangraphs/relievers_last14.csv"
-    command_ln = os.popen('ln -sf ' + new_file + ' ' + ln_file)
+    # TRANSFORM
+    # Read the CSV file, convert to dataframe, remap the column headers
+    stream = open('/Users/andrewfelton/Documents/bb/bb-2021/python/scraping/field_name_mapping.yml', 'r')
+    mapper = yaml.load(stream, yaml.CLoader)
+    fgfile = pd.read_csv(new_file)
+    fgfile.insert(0, 'asof_date', scrapedate)
+    for col in fgfile.columns:
+        fgfile.rename(columns={col:col.lower()}, inplace=True)
+    fgfile.rename(columns=mapper['fg'], inplace=True)
+    fgfile[['fg_id']] = fgfile[['fg_id']].astype(str)
 
-    driver.close()
-    #selenium_utilities.stop_selenium('bbsel')
-    print("Finished scraping "+ ln_file)
-
-    relievers_last14 = pd.read_csv(ln_file)
-    relievers_last14.insert(0, 'asof_date', date.today().strftime('%Y-%m-%d'))
-    relievers_last14.rename(columns={
-        'playerid':'fg_id',
-        "CSW%": "CSW_pct", "K%": "K_pct",
-        "BB%": "BB_pct", "SwStr%": "SwStr_pct",
-        'vFA (sc)':'vFA', 'LOB%':'LOB_pct', 'HR/FB':'HR_FB'
-        }, inplace=True)
-    relievers_last14[['fg_id']] = relievers_last14[['fg_id']].astype(str)
-    relievers_last14.sort_values(by='WPA', ascending=False, inplace=True)
-
-    # Check to confirm that all the fg_id are in the names table
-    # To avoid pandas issues take it out of the dataframe and then put it back in
-    # fg_ids = relievers_last14[['fg_id']].values
-    #put_missing_in_GS(id_list=pd.DataFrame(fg_ids, columns=['fg_id']), type='fg_id')
-
-    tablename = "relievers_last14_raw"
-    bbdb = postgres.connect_to_bbdb()
-
+    # Check if the table already exists and if so, clear out the information from the scrapedate
     query_tables = "SELECT * FROM pg_catalog.pg_tables WHERE schemaname='tracking';"
-    tables_list_result = bbdb.execute(query_tables)
-    tables_list = []
-    for table in tables_list_result:
-        tables_list.append(table[1])
-
-    if (tablename in tables_list):
-        command = 'TRUNCATE TABLE tracking.'+tablename
+    tables_list = [t for t in bbdb.execute(query_tables)]
+    if (table in tables_list):
+        if schema=='hist':
+            command = "DELETE FROM {schema}.{table} WHERE asof_date='{scrapedate}';".format(
+                schema=schema, table=table, scrapedate=scrapedate
+            )
+        elif schema=='tracking':
+            command = 'TRUNCATE TABLE tracking.{table}'.format(table=table)
         bbdb.execute(command)
-    relievers_last14.to_sql(tablename, bbdb, schema='tracking', if_exists='append', index=False)
 
-    return relievers_last14
+    # Load to the database
+    fgfile.to_sql(name=table, con=bbdb, schema=schema, if_exists='append')
+    return fgfile
+
+
+
+def scrape_fg_daily_leaderboards():
+    import datetime
+    scrapedate = datetime.date.today() - datetime.timedelta(days=1)
+    print('Scraping FG leaderboards for date: '+str(scrapedate))
+
+    folder = 'fangraphs/daily_results'
+    schema = 'hist'
+
+    url_bat = 'https://www.fangraphs.com/leaders.aspx?'+\
+        'pos=all&stats=bat&lg=all&qual=0&type=0&season=2021&month=1000&'+\
+        'season1=2021&ind=0&team=0&rost=0&age=0&filter=&players=0&'+\
+        'startdate={scrapedate}&enddate={scrapedate}'.format(scrapedate=scrapedate)
+    filename = 'batters'
+    table = 'daily_stats_batters'
+    daily_batters = scrape_fg_leaderboard(url_bat, scrapedate, folder, filename, schema, table)
+
+    url_pit = 'https://www.fangraphs.com/leaders.aspx?'+\
+        'pos=all&stats=pit&lg=all&qual=0&type=0&season=2021&month=1000&'+\
+        'season1=2021&ind=0&team=0&rost=0&age=0&filter=&players=0&'+\
+        'startdate={scrapedate}&enddate={scrapedate}'.format(scrapedate=scrapedate)
+    filename = 'pitchers'
+    table = 'daily_stats_pitchers'
+    daily_pitchers = scrape_fg_leaderboard(url_pit, scrapedate, folder, filename, schema, table)
+
+    fg_leaderboard_url='https://www.fangraphs.com/leaders.aspx?pos=all&stats=rel&lg=all&qual=0&type=c%2c7%2c13%2c11%2c114%2c70%2c63%2c-1%2c6%2c224%2c62%2c122%2c332%2c-1%2c331%2c120%2c121%2c113%2c-1%2c139%2c-1%2c43%2c44%2c51&season=2021&month=2&season1=2021&ind=0&team=0&rost=0&age=0&filter=&players=0&startdate=2021-01-01&enddate=2021-12-31&sort=8%2cd&page=1_500'
+    folder = 'fangraphs/relievers_last14'
+    schema = 'tracking'
+    filename = 'relievers_last14'
+    table = 'relievers_last14'
+    relievers = scrape_fg_leaderboard(fg_leaderboard_url, scrapedate, folder, filename, schema, table)
+
+    fg_leaderboard_url='https://www.fangraphs.com/leaders.aspx?pos=all&stats=bat&lg=all&qual=10&type=c,4,5,6,7,8,9,10,11,12,13,14,16,17,18,19,21,22,23,37,38&season=2021&month=3&season1=2021&ind=0&team=0&rost=0&age=0&filter=&players=0&startdate=2021-01-01&enddate=2021-12-31&sort=6,d&page=1_500'
+    folder = 'fangraphs/batters_last30'
+    schema = 'tracking'
+    filename = 'batters_last30'
+    table = 'batters_last30'
+    batters_last30 = scrape_fg_leaderboard(fg_leaderboard_url, scrapedate, folder, filename, schema, table)
+
+
+
 
 def get_fg_player_info(fg_id):
     #fg_id = '2429'
@@ -212,7 +251,7 @@ def get_fg_player_info(fg_id):
 
     fg_player_url = 'http://www.fangraphs.com/statss.aspx?playerid='+fg_id
     #print(fg_player_url)
-    r = requests.get(url=fg_player_url)
+    r = requests.get(url=fg_player_url, verify=False)
     soup = BeautifulSoup(r.text, 'lxml')
     div_player_info = soup.find('div', {'class':'player-info-box-header'})
     player['name'] = div_player_info.find('div', {'class':'player-info-box-name'}).find('h1').text.strip()

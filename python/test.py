@@ -15,6 +15,8 @@ import player_pool_stats
 sys.path.append('python/scraping')
 import scrape_razzball
 import scrape_bbref
+import scrape_ff
+import scrape_yahoo
 
 import pandas as pd
 import gspread
@@ -30,9 +32,14 @@ pd.set_option('display.precision', 2)
 pd.set_option('display.min_rows', 5)
 
 
+
+
+#test = player_pool_stats.create_combined_pitchers(ls)
+
 actuals_hitters = player_pool_stats.create_actuals_hitters(ls=league_sos, year=2021)
 act_hit_values = valuations.create_hitter_valuations(league=league_sos, stats=actuals_hitters)
-
+act_hit_values[['name', 'team', 'hr', 'r', 'rbi', 'sb', 'obp', 'ops', 'value']].head(20)
+1==1
 
 #with pd.option_context('display.max_rows', None, 'display.max_columns', None):  # more options can be specified also
     #print(hitters[['fg_id', 'name', 'pa', 'hr', 'rbi', 'zar']].head(100))
